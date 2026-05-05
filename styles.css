@@ -405,7 +405,7 @@ main {
 
 .programme-intro-emphasis {
   font-style: italic;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: 1.18em;
 }
 
@@ -667,7 +667,8 @@ main {
 }
 
 .about-apex-ananda {
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
+  font-style: italic;
 }
 
 .about-apex-body {
@@ -731,7 +732,7 @@ main {
 .programme-structure-heading {
   margin: 0.5rem 0 0;
   text-align: center;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: clamp(1.45rem, 3.9vw, 2.35rem);
   line-height: 1.2;
   background: linear-gradient(135deg, #f2d78d 0%, #d4a842 45%, #b88624 100%);
@@ -842,7 +843,8 @@ main {
 }
 
 .truth-heading-ananda {
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
+  font-style: italic;
 }
 
 .truth-subheading {
@@ -857,7 +859,7 @@ main {
 }
 
 .truth-subheading-highlight {
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   color: #a88734;
 }
 
@@ -1187,7 +1189,7 @@ main {
 
 .graduates-heading {
   margin: 0;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: clamp(1.65rem, 4.3vw, 2.55rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -1272,7 +1274,7 @@ main {
 
 .numbers-heading {
   margin: 0;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: clamp(1.8rem, 4.5vw, 2.8rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -1795,7 +1797,7 @@ main {
 
 .direction-heading {
   margin: 0;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: clamp(1.5rem, 4vw, 2.4rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -1885,7 +1887,7 @@ main > .faq-section {
 
 .testimonials-heading {
   margin: 0;
-  font-family: "Ananda", cursive;
+  font-family: var(--font-display);
   font-size: clamp(1.7rem, 4.4vw, 2.65rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
