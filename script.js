@@ -65,9 +65,26 @@ if (mentorGallery) {
   mentorGallery.addEventListener(
     "wheel",
     (event) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      const maxScrollLeft = mentorGallery.scrollWidth - mentorGallery.clientWidth;
+      if (maxScrollLeft <= 0) return;
+
+      const primaryDelta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (primaryDelta === 0) return;
+
+      const nextScrollLeft = mentorGallery.scrollLeft + primaryDelta;
+      const canScrollFurtherLeft = mentorGallery.scrollLeft > 0;
+      const canScrollFurtherRight = mentorGallery.scrollLeft < maxScrollLeft - 1;
+      const isScrollingLeft = primaryDelta < 0;
+      const isScrollingRight = primaryDelta > 0;
+
+      // Allow normal page up/down scroll when horizontal gallery is at boundaries.
+      if ((isScrollingLeft && !canScrollFurtherLeft) || (isScrollingRight && !canScrollFurtherRight)) {
+        return;
+      }
+
       event.preventDefault();
-      mentorGallery.scrollLeft += event.deltaY;
+      mentorGallery.scrollLeft = Math.max(0, Math.min(maxScrollLeft, nextScrollLeft));
     },
     { passive: false }
   );
