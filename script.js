@@ -121,6 +121,45 @@ trackTabs.forEach((tab) => {
   });
 });
 
+/**
+ * Google Sheets lead capture — paste your Apps Script Web App URL here after setup.
+ * Leave empty to only save leads in the browser (not recommended for production).
+ * Setup guide: see GOOGLE_SHEETS_SETUP.txt in this folder.
+ */
+const LEADS_SHEET_WEBHOOK_URL = "";
+
+function saveLeadLocally(leadPayload) {
+  const existingLeads = JSON.parse(localStorage.getItem("apex_union_leads") || "[]");
+  existingLeads.push(leadPayload);
+  localStorage.setItem("apex_union_leads", JSON.stringify(existingLeads));
+}
+
+async function submitLead(leadPayload) {
+  saveLeadLocally(leadPayload);
+
+  if (!LEADS_SHEET_WEBHOOK_URL) {
+    return { ok: true, sheet: false };
+  }
+
+  const response = await fetch(LEADS_SHEET_WEBHOOK_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(leadPayload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not save your application. Please try again.");
+  }
+
+  const result = await response.json();
+  if (!result.ok) {
+    throw new Error(result.error || "Could not save your application.");
+  }
+
+  return { ok: true, sheet: true };
+}
+
 const floatingApplyCta = document.querySelector(".floating-apply-cta");
 const launchpadSection = document.querySelector(".launchpad-section");
 const leadModal = document.querySelector("#lead-modal");
@@ -195,7 +234,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 if (leadForm) {
-  leadForm.addEventListener("submit", (event) => {
+  leadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const name = leadForm.name.value.trim();
@@ -225,18 +264,26 @@ if (leadForm) {
       submittedAt: new Date().toISOString(),
     };
 
-    const existingLeads = JSON.parse(localStorage.getItem("apex_union_leads") || "[]");
-    existingLeads.push(leadPayload);
-    localStorage.setItem("apex_union_leads", JSON.stringify(existingLeads));
-
-    leadFormMessage.textContent = "Thanks! Your application has been received.";
+    const submitButton = leadForm.querySelector(".lead-submit");
+    if (submitButton) submitButton.disabled = true;
+    leadFormMessage.textContent = "Submitting…";
     leadFormMessage.classList.remove("is-error");
-    leadForm.reset();
 
-    setTimeout(() => {
-      closeLeadModal();
-      leadFormMessage.textContent = "";
-    }, 1100);
+    try {
+      await submitLead(leadPayload);
+      leadFormMessage.textContent = "Thanks! Your application has been received.";
+      leadForm.reset();
+      setTimeout(() => {
+        closeLeadModal();
+        leadFormMessage.textContent = "";
+      }, 1100);
+    } catch (error) {
+      leadFormMessage.textContent =
+        error.message || "Something went wrong. Please try again.";
+      leadFormMessage.classList.add("is-error");
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 }
 
@@ -395,7 +442,7 @@ const inlineLeadForm = document.querySelector("#inline-lead-form");
 const inlineLeadMessage = document.querySelector("#inline-lead-message");
 
 if (inlineLeadForm && inlineLeadMessage) {
-  inlineLeadForm.addEventListener("submit", (event) => {
+  inlineLeadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const name = inlineLeadForm.name.value.trim();
@@ -424,14 +471,23 @@ if (inlineLeadForm && inlineLeadMessage) {
       submittedAt: new Date().toISOString(),
     };
 
-    const existingLeads = JSON.parse(localStorage.getItem("apex_union_leads") || "[]");
-    existingLeads.push(leadPayload);
-    localStorage.setItem("apex_union_leads", JSON.stringify(existingLeads));
-
-    inlineLeadMessage.textContent =
-      "Great! You're in. Our team will share cohort details shortly.";
+    const submitButton = inlineLeadForm.querySelector(".enroll-submit");
+    if (submitButton) submitButton.disabled = true;
+    inlineLeadMessage.textContent = "Submitting…";
     inlineLeadMessage.classList.remove("is-error");
-    inlineLeadForm.reset();
+
+    try {
+      await submitLead(leadPayload);
+      inlineLeadMessage.textContent =
+        "Great! You're in. Our team will share cohort details shortly.";
+      inlineLeadForm.reset();
+    } catch (error) {
+      inlineLeadMessage.textContent =
+        error.message || "Something went wrong. Please try again.";
+      inlineLeadMessage.classList.add("is-error");
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 }
 
@@ -554,7 +610,7 @@ if (testimonialsCarousel && testimonialsTrack && testimonialsDots) {
 }
 
 const animatedSections = document.querySelectorAll(
-  ".hero, .partners, .truth-section, .launchpad-section, .mentors-section, .graduates-section, .numbers-section, .curriculum-section, .investment-section, .enroll-section, .faq-section, .testimonials-section"
+  ".hero, .partners, .truth-section, .founders-section, .launchpad-section, .mentors-section, .graduates-section, .numbers-section, .curriculum-section, .investment-section, .enroll-section, .faq-section, .testimonials-section"
 );
 const reduceMotionForReveal = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

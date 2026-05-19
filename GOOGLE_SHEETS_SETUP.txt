@@ -1,0 +1,74 @@
+Apex Union — Connect form leads to Google Sheets (Excel-compatible)
+====================================================================
+
+Your site forms now POST to a Google Sheet when LEADS_SHEET_WEBHOOK_URL is set in script.js.
+
+STEP 1 — Create the spreadsheet
+-------------------------------
+1. Go to https://sheets.google.com
+2. Create a new spreadsheet named "Apex Union Leads"
+3. In row 1, add these column headers (A through H):
+
+   Timestamp | Name | Email | Phone | Track | Status | Source | Submitted At
+
+STEP 2 — Add the script
+-----------------------
+1. In the sheet: Extensions → Apps Script
+2. Delete any code in the editor and paste this:
+
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      new Date(),
+      data.name || "",
+      data.email || "",
+      data.phone || "",
+      data.track || "",
+      data.status || "",
+      data.source || "",
+      data.submittedAt || ""
+    ]);
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+3. Save the project (name it "Lead Webhook")
+
+STEP 3 — Deploy as web app
+--------------------------
+1. Deploy → New deployment
+2. Type: Web app
+3. Execute as: Me
+4. Who has access: Anyone
+5. Deploy → Authorize when prompted → Copy the Web App URL
+
+STEP 4 — Connect your website
+-----------------------------
+1. Open script.js in your Landing page project
+2. Set LEADS_SHEET_WEBHOOK_URL to the URL you copied, for example:
+
+   const LEADS_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/XXXX/exec";
+
+3. Save and redeploy your site (GitHub Pages, Netlify, etc.)
+
+STEP 5 — Test
+-------------
+Submit the form on your live site. A new row should appear in the sheet within seconds.
+
+Download as Excel
+-----------------
+File → Download → Microsoft Excel (.xlsx)
+
+Notes
+-----
+- Leads still save in the browser (localStorage) as backup until the sheet URL is set.
+- The sheet must be the same file where you added the Apps Script (active spreadsheet).
+- If you change the script, create a new deployment version and update the URL if needed.
