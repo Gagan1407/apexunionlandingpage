@@ -122,6 +122,8 @@ if (assetsWheel) {
   const chartHint = assetsWheel.querySelector(".about-assets-chart-hint");
   const legendItems = [...assetsWheel.querySelectorAll("[data-asset-index]")];
   const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const idleHint = supportsHover ? "Hover a segment" : "Tap a category";
+  assetsWheel.dataset.inputMode = supportsHover ? "hover" : "touch";
   const cx = 120;
   const cy = 120;
   const outerR = 100;
@@ -173,7 +175,7 @@ if (assetsWheel) {
       detailPanel.style.setProperty("--asset-accent", asset.accent);
     }
     if (chartStep) chartStep.textContent = String(index + 1).padStart(2, "0");
-    if (chartHint) chartHint.textContent = isIdle ? "Hover a segment" : asset.title;
+    if (chartHint) chartHint.textContent = isIdle ? idleHint : asset.title;
     if (detailTitle) detailTitle.textContent = asset.title;
     if (detailText) detailText.textContent = asset.text;
 
@@ -226,7 +228,11 @@ if (assetsWheel) {
     setActiveAsset(0, { reset: true });
   });
 
-  setActiveAsset(0, { reset: true });
+  if (supportsHover) {
+    setActiveAsset(0, { reset: true });
+  } else {
+    setActiveAsset(0, { hovered: true });
+  }
 }
 
 const truthBarriers = document.querySelector("[data-truth-barriers]");

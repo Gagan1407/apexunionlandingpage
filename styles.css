@@ -67,6 +67,7 @@ video {
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -129,7 +130,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 .section-lead {
@@ -161,6 +162,14 @@ main {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+main > section,
+.wrap {
+  min-width: 0;
+  max-width: 100%;
 }
 
 main > section {
@@ -1061,6 +1070,124 @@ main > section {
   .about-assets-legend-item:not(.is-active):hover {
     border-color: rgba(201, 168, 76, 0.55);
     background: rgba(255, 255, 255, 0.95);
+  }
+}
+
+/* About assets wheel — tablet & mobile */
+@media (max-width: 1024px) {
+  .about-assets-wheel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    grid-template-areas:
+      "chart detail"
+      "legend detail";
+    align-items: center;
+    gap: clamp(0.85rem, 2.5vw, 1.25rem) clamp(0.85rem, 2.5vw, 1.5rem);
+    width: 100%;
+  }
+
+  .about-assets-wheel-layout {
+    display: contents;
+  }
+
+  .about-assets-chart-wrap {
+    grid-area: chart;
+    width: min(100%, 280px);
+    justify-self: center;
+  }
+
+  .about-assets-detail {
+    grid-area: detail;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .about-assets-legend {
+    grid-area: legend;
+    margin-top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    max-width: 320px;
+    justify-self: center;
+  }
+
+  .about-assets-legend-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 2.5rem;
+    line-height: 1.2;
+    padding: 0.45rem 0.7rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .about-assets-wheel {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "chart"
+      "legend"
+      "detail";
+    gap: 0.85rem;
+  }
+
+  .about-assets-chart-wrap {
+    width: min(68vw, 250px);
+  }
+
+  .about-assets-legend {
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .about-assets-legend-item {
+    min-height: 2.75rem;
+    font-size: 0.7rem;
+    padding: 0.5rem 0.55rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .about-assets-legend-item:nth-child(5) {
+    grid-column: 1 / -1;
+    max-width: 14rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  .about-assets-detail {
+    padding: 1rem 1.05rem;
+  }
+
+  .about-assets-chart-center {
+    width: 44%;
+  }
+
+  .about-assets-chart-hint {
+    font-size: 0.58rem;
+    line-height: 1.25;
+  }
+
+  .about-assets-wheel[data-input-mode="touch"] .about-assets-segment {
+    cursor: pointer;
+  }
+
+  .about-assets-wheel[data-input-mode="touch"] .about-assets-legend::before {
+    content: "Select a category";
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-accent-gold);
   }
 }
 
@@ -1987,16 +2114,54 @@ main > section {
   text-align: center;
 }
 
+.table-scroll-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 168, 76, 0.55) rgba(77, 0, 0, 0.06);
+}
+
+.table-scroll-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-scroll-wrap::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.55);
+  border-radius: 999px;
+}
+
+.table-scroll-hint {
+  margin: 0.45rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted-on-light);
+}
+
+.table-scroll-hint--dark {
+  color: rgba(241, 233, 201, 0.62);
+}
+
+@media (min-width: 901px) {
+  .table-scroll-hint {
+    display: none;
+  }
+}
+
 .hiring-table-wrap {
   margin-top: clamp(1.2rem, 4vw, 2rem);
-  overflow-x: auto;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   background: var(--surface-card);
 }
 
 .hiring-table {
-  min-width: 760px;
+  min-width: 720px;
+  width: 100%;
 }
 
 .hiring-row {
@@ -3457,17 +3622,6 @@ main > section.enroll-section {
     grid-template-columns: 1fr;
   }
 
-  .about-assets-wheel-layout {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  .about-assets-detail {
-    max-width: 520px;
-    margin-inline: auto;
-    width: 100%;
-  }
-
   .audience-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3509,127 +3663,23 @@ main > section.enroll-section {
   }
 
   .hiring-table {
-    min-width: 0;
-  }
-
-  .hiring-table-wrap {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-@media (max-width: 900px) {
-  .hiring-table-wrap {
-    overflow-x: visible;
-    border: 0;
-    background: transparent;
-  }
-
-  .hiring-table {
-    min-width: 0;
-    display: grid;
-    gap: 0.65rem;
-  }
-
-  .hiring-row-head {
-    display: none;
-  }
-
-  .hiring-row:not(.hiring-row-head) {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
-    padding: 0.95rem 1rem;
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
-    background: var(--surface-card);
-    box-shadow: var(--shadow-soft);
-  }
-
-  .hiring-row:not(.hiring-row-head) p:first-child {
-    font-size: 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  .hiring-row:not(.hiring-row-head) p:nth-child(2)::before {
-    content: "Sector: ";
-    font-weight: 700;
-    color: var(--text-on-light);
-  }
-
-  .hiring-row:not(.hiring-row-head) p:nth-child(3)::before {
-    content: "Roles: ";
-    font-weight: 700;
-    color: var(--text-on-light);
-  }
-
-  .comparison-table-wrap {
-    overflow-x: visible;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+    min-width: 640px;
   }
 
   .comparison-table {
-    min-width: 0;
-    display: block;
+    min-width: 580px;
+    font-size: 0.88rem;
   }
 
-  .comparison-table thead {
-    display: none;
-  }
-
-  .comparison-table tbody {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .comparison-table tbody tr {
-    display: block;
-    border: 1px solid rgba(241, 233, 201, 0.2);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
-  }
-
+  .comparison-table thead th,
   .comparison-table tbody th,
   .comparison-table tbody td {
-    display: block;
-    white-space: normal;
-    border-bottom: 1px solid rgba(241, 233, 201, 0.1);
+    padding: 0.72rem 0.8rem;
   }
 
   .comparison-table tbody th {
-    padding: 0.75rem 1rem;
-    font-size: 0.95rem;
-    background: rgba(0, 0, 0, 0.28);
-  }
-
-  .comparison-table tbody td {
-    padding: 0.7rem 1rem;
-  }
-
-  .comparison-table tbody td:nth-child(2)::before,
-  .comparison-table tbody td:nth-child(3)::before {
-    display: block;
-    margin-bottom: 0.2rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(241, 233, 201, 0.62);
-  }
-
-  .comparison-table tbody td:nth-child(2)::before {
-    content: "Traditional MBA";
-  }
-
-  .comparison-table tbody td:nth-child(3)::before {
-    content: "Apex Union";
-  }
-
-  .comparison-table tbody td:last-child {
-    border-bottom: 0;
+    white-space: normal;
+    min-width: 6.5rem;
   }
 }
 
@@ -3737,6 +3787,56 @@ main > section.enroll-section {
   .floating-apply-cta {
     font-size: 0.88rem;
     padding: 0.7rem 1rem;
+  }
+
+  .hiring-table {
+    min-width: 540px;
+  }
+
+  .hiring-row {
+    grid-template-columns: 0.95fr 1.15fr 1.35fr;
+    gap: 0.5rem;
+    padding: 0.62rem 0.7rem;
+  }
+
+  .hiring-row p {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .hiring-row-head p {
+    font-size: 0.76rem;
+  }
+
+  .comparison-table {
+    min-width: 500px;
+    font-size: 0.8rem;
+  }
+
+  .comparison-table thead th {
+    font-size: 0.78rem;
+    padding: 0.6rem 0.65rem;
+  }
+
+  .comparison-table tbody th,
+  .comparison-table tbody td {
+    padding: 0.58rem 0.65rem;
+  }
+
+  .comparison-table tbody th {
+    white-space: normal;
+    min-width: 5.5rem;
+    font-size: 0.78rem;
+  }
+
+  .graduates-subheading {
+    font-size: 0.95rem;
+    padding-inline: 0;
+  }
+
+  .about-apex-heading,
+  .about-apex-body {
+    padding-inline: 0;
   }
 }
 
@@ -3992,14 +4092,6 @@ main > section.enroll-section {
     max-width: none;
   }
 
-  .about-assets-chart-wrap {
-    width: min(100%, 280px);
-  }
-
-  .about-assets-legend-item {
-    font-size: 0.72rem;
-    padding: 0.4rem 0.7rem;
-  }
 }
 
 /* How to apply / admission */
@@ -4139,7 +4231,6 @@ main > section.enroll-section {
 }
 
 .comparison-table-wrap {
-  overflow-x: auto;
   border: 1px solid rgba(241, 233, 201, 0.18);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
@@ -4148,7 +4239,7 @@ main > section.enroll-section {
 
 .comparison-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 620px;
   border-collapse: collapse;
   font-size: 0.94rem;
   line-height: 1.45;
