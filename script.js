@@ -1,93 +1,296 @@
-const truthCards = document.querySelectorAll(".truth-card");
+const truthBarrierData = [
+  {
+    symbol: "🎓",
+    title: "The Degree Trap",
+    copy: [
+      'You spent 3-4 years on a degree.<br><strong>Companies still ask:</strong><br>"But can you sell?"',
+      "<strong>MBA-style content, zero job outcomes.</strong><br>You learn slides and frameworks but can't prove execution in interviews.",
+    ],
+  },
+  {
+    symbol: "⛓️‍💥",
+    title: "The Skills Gap",
+    copy: [
+      "College taught frameworks.<br>Not how to write a cold email,<br>run a discovery call, or<br>build a pipeline.",
+      "<strong>Cold applications go nowhere.</strong><br>Without proof-of-work and referrals, resumes get ignored by recruiters.",
+    ],
+  },
+  {
+    symbol: "🚪🔒",
+    title: "The Network Gap",
+    copy: [
+      "You don't know anyone at<br>the companies you want to<br>work at. No warm intros.<br>No insider access.",
+      "<strong>You need a network, not just notes.</strong><br>Career growth is peer-driven and mentor-led, not solo YouTube learning.",
+    ],
+  },
+];
 
-truthCards.forEach((card) => {
-  const toggle = card.querySelector(".truth-card-toggle");
-  const front = card.querySelector(".truth-card-front");
-  const back = card.querySelector(".truth-card-back");
+const aboutAssetData = [
+  {
+    title: "Live Campaigns",
+    text: "Launch real strategies that drive actual growth.",
+    gradient: ["#320000", "#4d0000"],
+    gradientActive: ["#4d0000", "#7a1a1a"],
+    accent: "#4d0000",
+  },
+  {
+    title: "Sales Exercises",
+    text: "Pitch, negotiate, and close deals live.",
+    gradient: ["#4d0000", "#6b1414"],
+    gradientActive: ["#6b1414", "#943030"],
+    accent: "#6b1414",
+  },
+  {
+    title: "High-Impact Presentations",
+    text: "Command rooms like a seasoned executive.",
+    gradient: ["#a87820", "#c9a84c"],
+    gradientActive: ["#c9a84c", "#f2d78d"],
+    accent: "#c9a84c",
+  },
+  {
+    title: "Portfolio Assets",
+    text: "Create production-quality case studies.",
+    gradient: ["#3a0000", "#5c0000"],
+    gradientActive: ["#5c0000", "#8a2a2a"],
+    accent: "#5c0000",
+  },
+  {
+    title: "Pro-Critiqued Projects",
+    text: "Get feedback directly from active industry leaders.",
+    gradient: ["#8a6a2c", "#d4b76a"],
+    gradientActive: ["#c9a84c", "#f8efd0"],
+    accent: "#a87820",
+  },
+];
 
-  if (!toggle || !front || !back) return;
+function createSvgGradient(defsEl, id, stops, angle = 135) {
+  const rad = (angle * Math.PI) / 180;
+  const x1 = 50 - Math.cos(rad) * 50;
+  const y1 = 50 - Math.sin(rad) * 50;
+  const x2 = 50 + Math.cos(rad) * 50;
+  const y2 = 50 + Math.sin(rad) * 50;
+  const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+  gradient.setAttribute("id", id);
+  gradient.setAttribute("x1", `${x1}%`);
+  gradient.setAttribute("y1", `${y1}%`);
+  gradient.setAttribute("x2", `${x2}%`);
+  gradient.setAttribute("y2", `${y2}%`);
 
-  toggle.addEventListener("click", () => {
-    const isFlipped = card.classList.toggle("is-flipped");
-    toggle.setAttribute("aria-expanded", String(isFlipped));
-    front.setAttribute("aria-hidden", String(isFlipped));
-    back.setAttribute("aria-hidden", String(!isFlipped));
+  stops.forEach((color, index) => {
+    const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+    stop.setAttribute("offset", index === 0 ? "0%" : "100%");
+    stop.setAttribute("stop-color", color);
+    gradient.appendChild(stop);
   });
-});
 
-function initMentorCard(card) {
-  const toggle = card.querySelector(".mentor-card-toggle");
-  const front = card.querySelector(".mentor-card-front");
-  const back = card.querySelector(".mentor-card-back");
-
-  if (!toggle || !front || !back) return;
-
-  toggle.addEventListener("click", () => {
-    const isFlipped = card.classList.toggle("is-flipped");
-    toggle.setAttribute("aria-expanded", String(isFlipped));
-    front.setAttribute("aria-hidden", String(isFlipped));
-    back.setAttribute("aria-hidden", String(!isFlipped));
-  });
+  defsEl.appendChild(gradient);
 }
 
-const mentorCardTrack = document.querySelector(".mentor-cards");
+function polarToCartesian(cx, cy, radius, angleDeg) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return {
+    x: cx + radius * Math.cos(rad),
+    y: cy + radius * Math.sin(rad),
+  };
+}
 
-if (mentorCardTrack) {
-  const originalCards = Array.from(mentorCardTrack.querySelectorAll(".mentor-card"));
+function describeDonutSegment(cx, cy, outerR, innerR, startAngle, endAngle) {
+  const startOuter = polarToCartesian(cx, cy, outerR, endAngle);
+  const endOuter = polarToCartesian(cx, cy, outerR, startAngle);
+  const startInner = polarToCartesian(cx, cy, innerR, startAngle);
+  const endInner = polarToCartesian(cx, cy, innerR, endAngle);
+  const largeArc = endAngle - startAngle <= 180 ? 0 : 1;
 
-  originalCards.forEach((card) => {
-    initMentorCard(card);
+  return [
+    `M ${startOuter.x} ${startOuter.y}`,
+    `A ${outerR} ${outerR} 0 ${largeArc} 0 ${endOuter.x} ${endOuter.y}`,
+    `L ${startInner.x} ${startInner.y}`,
+    `A ${innerR} ${innerR} 0 ${largeArc} 1 ${endInner.x} ${endInner.y}`,
+    "Z",
+  ].join(" ");
+}
+
+const assetsWheel = document.querySelector("[data-assets-wheel]");
+
+if (assetsWheel) {
+  const segmentsGroup = assetsWheel.querySelector("[data-assets-segments]");
+  const gradientsHost = assetsWheel.querySelector("[data-assets-gradients]");
+  const detailPanel = assetsWheel.querySelector("[data-assets-detail]");
+  const detailTitle = assetsWheel.querySelector("[data-assets-title]");
+  const detailText = assetsWheel.querySelector("[data-assets-text]");
+  const chartStep = assetsWheel.querySelector("[data-assets-step]");
+  const chartHint = assetsWheel.querySelector(".about-assets-chart-hint");
+  const legendItems = [...assetsWheel.querySelectorAll("[data-asset-index]")];
+  const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const cx = 120;
+  const cy = 120;
+  const outerR = 100;
+  const innerR = 58;
+  const gap = 2.5;
+  const segmentAngle = 360 / aboutAssetData.length;
+  let isHovering = false;
+
+  aboutAssetData.forEach((asset, index) => {
+    if (!gradientsHost) return;
+    createSvgGradient(gradientsHost, `asset-grad-${index}`, asset.gradient, 125 + index * 18);
+    createSvgGradient(
+      gradientsHost,
+      `asset-grad-${index}-active`,
+      asset.gradientActive,
+      125 + index * 18
+    );
   });
 
-  originalCards.forEach((card) => {
-    const clone = card.cloneNode(true);
-    clone.classList.add("is-clone");
-    clone.setAttribute("aria-hidden", "true");
-    clone.querySelectorAll("a, button").forEach((el) => {
-      el.setAttribute("tabindex", "-1");
+  function setActiveAsset(index, options = {}) {
+    const { hovered = false, reset = false } = options;
+    if (index < 0 || index >= aboutAssetData.length) return;
+
+    isHovering = hovered;
+    const asset = aboutAssetData[index];
+    const isIdle = reset || (!hovered && index === 0);
+
+    assetsWheel.classList.toggle("is-idle", isIdle);
+
+    assetsWheel.querySelectorAll(".about-assets-segment").forEach((segment, segmentIndex) => {
+      const isActive = segmentIndex === index && !isIdle;
+      segment.classList.toggle("is-active", isActive);
+      const pathEl = segment.querySelector("path");
+      if (pathEl) {
+        pathEl.setAttribute(
+          "fill",
+          isActive ? `url(#asset-grad-${segmentIndex}-active)` : `url(#asset-grad-${segmentIndex})`
+        );
+      }
     });
-    mentorCardTrack.appendChild(clone);
+
+    legendItems.forEach((item) => {
+      const itemIndex = Number(item.dataset.assetIndex);
+      item.classList.toggle("is-active", itemIndex === index && !isIdle);
+    });
+
+    if (detailPanel) {
+      detailPanel.classList.add("is-updating");
+      detailPanel.style.setProperty("--asset-accent", asset.accent);
+    }
+    if (chartStep) chartStep.textContent = String(index + 1).padStart(2, "0");
+    if (chartHint) chartHint.textContent = isIdle ? "Hover a segment" : asset.title;
+    if (detailTitle) detailTitle.textContent = asset.title;
+    if (detailText) detailText.textContent = asset.text;
+
+    requestAnimationFrame(() => {
+      detailPanel?.classList.remove("is-updating");
+    });
+  }
+
+  function bindAssetTrigger(element, index) {
+    const activate = (hovered) => setActiveAsset(index, { hovered });
+
+    if (supportsHover) {
+      element.addEventListener("mouseenter", () => activate(true));
+    } else {
+      element.addEventListener("click", () => activate(true));
+    }
+
+    element.addEventListener("focusin", () => activate(true));
+  }
+
+  if (segmentsGroup) {
+    aboutAssetData.forEach((asset, index) => {
+      const startAngle = -90 + index * segmentAngle + gap / 2;
+      const endAngle = -90 + (index + 1) * segmentAngle - gap / 2;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute(
+        "d",
+        describeDonutSegment(cx, cy, outerR, innerR, startAngle, endAngle)
+      );
+      path.setAttribute("fill", `url(#asset-grad-${index})`);
+
+      const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      group.classList.add("about-assets-segment");
+      group.dataset.assetIndex = String(index);
+      group.setAttribute("tabindex", "0");
+      group.setAttribute("aria-label", `${asset.title}: ${asset.text}`);
+      group.appendChild(path);
+      segmentsGroup.appendChild(group);
+
+      bindAssetTrigger(group, index);
+    });
+  }
+
+  legendItems.forEach((item) => {
+    bindAssetTrigger(item, Number(item.dataset.assetIndex));
   });
 
-  const updateMentorGalleryDistance = () => {
-    const firstClone = mentorCardTrack.querySelector(".mentor-card.is-clone");
-    if (!firstClone) return;
-    mentorCardTrack.style.setProperty("--mentor-scroll-distance", `${firstClone.offsetLeft}px`);
+  assetsWheel.addEventListener("mouseleave", () => {
+    if (!supportsHover) return;
+    setActiveAsset(0, { reset: true });
+  });
+
+  setActiveAsset(0, { reset: true });
+}
+
+const truthBarriers = document.querySelector("[data-truth-barriers]");
+
+if (truthBarriers) {
+  const tabs = Array.from(truthBarriers.querySelectorAll("[data-truth-tab]"));
+  const panel = truthBarriers.querySelector("[data-truth-panel]");
+  const panelInner = truthBarriers.querySelector("[data-truth-panel-inner]");
+  const panelSymbol = truthBarriers.querySelector("[data-truth-panel-symbol]");
+  const panelTitle = truthBarriers.querySelector("[data-truth-panel-title]");
+  const panelCopy = truthBarriers.querySelector("[data-truth-panel-copy]");
+  let activeIndex = 0;
+
+  const renderTruthBarrier = (index) => {
+    const item = truthBarrierData[index];
+    if (!item || !panel) return;
+
+    activeIndex = index;
+    panelSymbol.textContent = item.symbol;
+    panelTitle.textContent = item.title;
+    panelCopy.innerHTML = item.copy.map((paragraph) => `<p>${paragraph}</p>`).join("");
+    panel.setAttribute("aria-labelledby", `truth-tab-${index}`);
+    panelInner.classList.remove("is-updating");
+    void panelInner.offsetWidth;
+    panelInner.classList.add("is-updating");
+
+    tabs.forEach((tab, tabIndex) => {
+      const isActive = tabIndex === index;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+    });
   };
 
-  updateMentorGalleryDistance();
-  window.addEventListener("resize", updateMentorGalleryDistance);
-}
+  tabs.forEach((tab) => {
+    const index = Number(tab.dataset.truthTab);
 
-const mentorGallery = document.querySelector(".mentor-gallery");
+    tab.addEventListener("click", () => {
+      renderTruthBarrier(index);
+    });
 
-if (mentorGallery) {
-  mentorGallery.addEventListener(
-    "wheel",
-    (event) => {
-      const maxScrollLeft = mentorGallery.scrollWidth - mentorGallery.clientWidth;
-      if (maxScrollLeft <= 0) return;
+    tab.addEventListener("mouseenter", () => {
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        renderTruthBarrier(index);
+      }
+    });
 
-      const primaryDelta =
-        Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (primaryDelta === 0) return;
+    tab.addEventListener("keydown", (event) => {
+      let nextIndex = null;
 
-      const nextScrollLeft = mentorGallery.scrollLeft + primaryDelta;
-      const canScrollFurtherLeft = mentorGallery.scrollLeft > 0;
-      const canScrollFurtherRight = mentorGallery.scrollLeft < maxScrollLeft - 1;
-      const isScrollingLeft = primaryDelta < 0;
-      const isScrollingRight = primaryDelta > 0;
-
-      // Allow normal page up/down scroll when horizontal gallery is at boundaries.
-      if ((isScrollingLeft && !canScrollFurtherLeft) || (isScrollingRight && !canScrollFurtherRight)) {
-        return;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        nextIndex = (index + 1) % tabs.length;
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        nextIndex = (index - 1 + tabs.length) % tabs.length;
       }
 
-      event.preventDefault();
-      mentorGallery.scrollLeft = Math.max(0, Math.min(maxScrollLeft, nextScrollLeft));
-    },
-    { passive: false }
-  );
+      if (nextIndex !== null) {
+        event.preventDefault();
+        tabs[nextIndex].focus();
+        renderTruthBarrier(nextIndex);
+      }
+    });
+  });
+
+  renderTruthBarrier(0);
 }
 
 const trackTabs = document.querySelectorAll(".track-tab");
@@ -161,7 +364,8 @@ async function submitLead(leadPayload) {
 }
 
 const floatingApplyCta = document.querySelector(".floating-apply-cta");
-const launchpadSection = document.querySelector(".launchpad-section");
+const floatingApplyTrigger =
+  document.querySelector(".hero") || document.querySelector("#enroll");
 const leadModal = document.querySelector("#lead-modal");
 const leadForm = document.querySelector("#lead-form");
 const leadFormMessage = document.querySelector("#lead-form-message");
@@ -288,9 +492,9 @@ if (leadForm) {
 }
 
 function updateFloatingApplyVisibility() {
-  if (!floatingApplyCta || !launchpadSection) return;
+  if (!floatingApplyCta || !floatingApplyTrigger) return;
 
-  const triggerPoint = launchpadSection.offsetTop + launchpadSection.offsetHeight - 240;
+  const triggerPoint = floatingApplyTrigger.offsetTop + floatingApplyTrigger.offsetHeight * 0.65;
   const shouldShow = window.scrollY > triggerPoint;
 
   floatingApplyCta.classList.toggle("is-visible", shouldShow);
@@ -497,7 +701,14 @@ const testimonialsDots = document.querySelector("[data-testimonials-dots]");
 
 if (testimonialsCarousel && testimonialsTrack && testimonialsDots) {
   const testimonialCards = Array.from(testimonialsTrack.children);
-  let cardsPerView = window.matchMedia("(max-width: 767px)").matches ? 1 : 3;
+
+  function getCardsPerView() {
+    if (window.matchMedia("(max-width: 767px)").matches) return 1;
+    if (window.matchMedia("(max-width: 1024px)").matches) return 2;
+    return 3;
+  }
+
+  let cardsPerView = getCardsPerView();
   let totalPages = Math.max(1, Math.ceil(testimonialCards.length / cardsPerView));
   let currentPage = 0;
   let autoPlayId = null;
@@ -563,7 +774,7 @@ if (testimonialsCarousel && testimonialsTrack && testimonialsDots) {
   }
 
   function refreshCarouselLayout() {
-    cardsPerView = window.matchMedia("(max-width: 767px)").matches ? 1 : 3;
+    cardsPerView = getCardsPerView();
     totalPages = Math.max(1, Math.ceil(testimonialCards.length / cardsPerView));
     currentPage = Math.min(currentPage, totalPages - 1);
     buildDots();
@@ -610,7 +821,7 @@ if (testimonialsCarousel && testimonialsTrack && testimonialsDots) {
 }
 
 const animatedSections = document.querySelectorAll(
-  ".hero, .partners, .truth-section, .founders-section, .launchpad-section, .mentors-section, .graduates-section, .numbers-section, .curriculum-section, .investment-section, .enroll-section, .faq-section, .testimonials-section"
+  ".hero, .partners, .truth-section, .about-apex-section, .programme-structure-section, .founders-section, .mentors-section, .graduates-section, .numbers-section, .comparison-section, .audience-section, .admission-section, .enroll-section, .faq-section, .testimonials-section"
 );
 const reduceMotionForReveal = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -631,4 +842,142 @@ if (animatedSections.length > 0 && !reduceMotionForReveal) {
   animatedSections.forEach((section) => revealObserver.observe(section));
 } else {
   animatedSections.forEach((section) => section.classList.add("is-visible"));
+}
+
+const mentorMarquee = document.querySelector("[data-mentor-marquee]");
+
+if (mentorMarquee) {
+  const view = mentorMarquee.querySelector(".mentor-marquee-view");
+  const track = mentorMarquee.querySelector(".mentor-marquee-track");
+  const group = mentorMarquee.querySelector(".mentor-marquee-group");
+
+  if (view && track && group) {
+    if (!mentorMarquee.querySelector(".mentor-marquee-group--duplicate")) {
+      const duplicateGroup = group.cloneNode(true);
+      duplicateGroup.classList.add("mentor-marquee-group--duplicate");
+      duplicateGroup.setAttribute("aria-hidden", "true");
+      duplicateGroup.querySelectorAll("a").forEach((link) => {
+        link.setAttribute("tabindex", "-1");
+      });
+      track.appendChild(duplicateGroup);
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!prefersReducedMotion) {
+      let loopWidth = 0;
+      let autoScrollActive = true;
+      let resumeTimer = null;
+      let rafId = null;
+      let lastTimestamp = 0;
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartScrollLeft = 0;
+      const pixelsPerSecond = 32;
+
+      function measureLoop() {
+        loopWidth = group.getBoundingClientRect().width;
+      }
+
+      function pauseAutoScroll(duration = 4000) {
+        autoScrollActive = false;
+        window.clearTimeout(resumeTimer);
+        resumeTimer = window.setTimeout(() => {
+          autoScrollActive = true;
+          lastTimestamp = 0;
+        }, duration);
+      }
+
+      function normalizeScroll() {
+        if (loopWidth <= 0) return;
+        while (view.scrollLeft >= loopWidth) {
+          view.scrollLeft -= loopWidth;
+        }
+      }
+
+      function tick(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        const delta = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+
+        if (autoScrollActive && loopWidth > 0 && !isDragging) {
+          view.scrollLeft += (pixelsPerSecond * delta) / 1000;
+          normalizeScroll();
+        }
+
+        rafId = window.requestAnimationFrame(tick);
+      }
+
+      measureLoop();
+      window.addEventListener("resize", measureLoop);
+
+      view.setAttribute("tabindex", "0");
+      view.setAttribute("role", "region");
+      view.setAttribute("aria-label", "Scroll mentor profiles horizontally");
+
+      view.addEventListener(
+        "scroll",
+        () => {
+          normalizeScroll();
+        },
+        { passive: true }
+      );
+
+      view.addEventListener("wheel", () => pauseAutoScroll(), { passive: true });
+      view.addEventListener("touchstart", () => pauseAutoScroll(), { passive: true });
+      view.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+          pauseAutoScroll();
+        }
+      });
+
+      view.addEventListener("mouseenter", () => {
+        autoScrollActive = false;
+      });
+
+      view.addEventListener("mouseleave", () => {
+        if (!isDragging) {
+          autoScrollActive = true;
+          lastTimestamp = 0;
+        }
+      });
+
+      view.addEventListener("pointerdown", (event) => {
+        if (event.target.closest("a, button")) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        isDragging = true;
+        view.classList.add("is-dragging");
+        dragStartX = event.clientX;
+        dragStartScrollLeft = view.scrollLeft;
+        pauseAutoScroll(6000);
+        view.setPointerCapture(event.pointerId);
+      });
+
+      view.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const deltaX = event.clientX - dragStartX;
+        view.scrollLeft = dragStartScrollLeft - deltaX;
+        normalizeScroll();
+      });
+
+      function endDrag(event) {
+        if (!isDragging) return;
+        isDragging = false;
+        view.classList.remove("is-dragging");
+        if (event?.pointerId !== undefined && view.hasPointerCapture(event.pointerId)) {
+          view.releasePointerCapture(event.pointerId);
+        }
+      }
+
+      view.addEventListener("pointerup", endDrag);
+      view.addEventListener("pointercancel", endDrag);
+
+      rafId = window.requestAnimationFrame(tick);
+
+      window.addEventListener("beforeunload", () => {
+        if (rafId) window.cancelAnimationFrame(rafId);
+        window.clearTimeout(resumeTimer);
+      });
+    }
+  }
 }
