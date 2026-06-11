@@ -369,9 +369,6 @@ async function submitLead(leadPayload) {
   return { ok: true, sheet: true };
 }
 
-const floatingApplyCta = document.querySelector(".floating-apply-cta");
-const floatingApplyTrigger =
-  document.querySelector(".hero") || document.querySelector("#enroll");
 const leadModal = document.querySelector("#lead-modal");
 const leadForm = document.querySelector("#lead-form");
 const leadFormMessage = document.querySelector("#lead-form-message");
@@ -496,21 +493,6 @@ if (leadForm) {
     }
   });
 }
-
-function updateFloatingApplyVisibility() {
-  if (!floatingApplyCta || !floatingApplyTrigger) return;
-
-  const triggerPoint = floatingApplyTrigger.offsetTop + floatingApplyTrigger.offsetHeight * 0.65;
-  const shouldShow = window.scrollY > triggerPoint;
-
-  floatingApplyCta.classList.toggle("is-visible", shouldShow);
-}
-
-updateFloatingApplyVisibility();
-window.addEventListener("scroll", updateFloatingApplyVisibility, {
-  passive: true,
-});
-window.addEventListener("resize", updateFloatingApplyVisibility);
 
 const countupItems = document.querySelectorAll("[data-countup]");
 
@@ -848,142 +830,4 @@ if (animatedSections.length > 0 && !reduceMotionForReveal) {
   animatedSections.forEach((section) => revealObserver.observe(section));
 } else {
   animatedSections.forEach((section) => section.classList.add("is-visible"));
-}
-
-const mentorMarquee = document.querySelector("[data-mentor-marquee]");
-
-if (mentorMarquee) {
-  const view = mentorMarquee.querySelector(".mentor-marquee-view");
-  const track = mentorMarquee.querySelector(".mentor-marquee-track");
-  const group = mentorMarquee.querySelector(".mentor-marquee-group");
-
-  if (view && track && group) {
-    if (!mentorMarquee.querySelector(".mentor-marquee-group--duplicate")) {
-      const duplicateGroup = group.cloneNode(true);
-      duplicateGroup.classList.add("mentor-marquee-group--duplicate");
-      duplicateGroup.setAttribute("aria-hidden", "true");
-      duplicateGroup.querySelectorAll("a").forEach((link) => {
-        link.setAttribute("tabindex", "-1");
-      });
-      track.appendChild(duplicateGroup);
-    }
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (!prefersReducedMotion) {
-      let loopWidth = 0;
-      let autoScrollActive = true;
-      let resumeTimer = null;
-      let rafId = null;
-      let lastTimestamp = 0;
-      let isDragging = false;
-      let dragStartX = 0;
-      let dragStartScrollLeft = 0;
-      const pixelsPerSecond = 32;
-
-      function measureLoop() {
-        loopWidth = group.getBoundingClientRect().width;
-      }
-
-      function pauseAutoScroll(duration = 4000) {
-        autoScrollActive = false;
-        window.clearTimeout(resumeTimer);
-        resumeTimer = window.setTimeout(() => {
-          autoScrollActive = true;
-          lastTimestamp = 0;
-        }, duration);
-      }
-
-      function normalizeScroll() {
-        if (loopWidth <= 0) return;
-        while (view.scrollLeft >= loopWidth) {
-          view.scrollLeft -= loopWidth;
-        }
-      }
-
-      function tick(timestamp) {
-        if (!lastTimestamp) lastTimestamp = timestamp;
-        const delta = timestamp - lastTimestamp;
-        lastTimestamp = timestamp;
-
-        if (autoScrollActive && loopWidth > 0 && !isDragging) {
-          view.scrollLeft += (pixelsPerSecond * delta) / 1000;
-          normalizeScroll();
-        }
-
-        rafId = window.requestAnimationFrame(tick);
-      }
-
-      measureLoop();
-      window.addEventListener("resize", measureLoop);
-
-      view.setAttribute("tabindex", "0");
-      view.setAttribute("role", "region");
-      view.setAttribute("aria-label", "Scroll mentor profiles horizontally");
-
-      view.addEventListener(
-        "scroll",
-        () => {
-          normalizeScroll();
-        },
-        { passive: true }
-      );
-
-      view.addEventListener("wheel", () => pauseAutoScroll(), { passive: true });
-      view.addEventListener("touchstart", () => pauseAutoScroll(), { passive: true });
-      view.addEventListener("keydown", (event) => {
-        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-          pauseAutoScroll();
-        }
-      });
-
-      view.addEventListener("mouseenter", () => {
-        autoScrollActive = false;
-      });
-
-      view.addEventListener("mouseleave", () => {
-        if (!isDragging) {
-          autoScrollActive = true;
-          lastTimestamp = 0;
-        }
-      });
-
-      view.addEventListener("pointerdown", (event) => {
-        if (event.target.closest("a, button")) return;
-        if (event.pointerType === "mouse" && event.button !== 0) return;
-        isDragging = true;
-        view.classList.add("is-dragging");
-        dragStartX = event.clientX;
-        dragStartScrollLeft = view.scrollLeft;
-        pauseAutoScroll(6000);
-        view.setPointerCapture(event.pointerId);
-      });
-
-      view.addEventListener("pointermove", (event) => {
-        if (!isDragging) return;
-        const deltaX = event.clientX - dragStartX;
-        view.scrollLeft = dragStartScrollLeft - deltaX;
-        normalizeScroll();
-      });
-
-      function endDrag(event) {
-        if (!isDragging) return;
-        isDragging = false;
-        view.classList.remove("is-dragging");
-        if (event?.pointerId !== undefined && view.hasPointerCapture(event.pointerId)) {
-          view.releasePointerCapture(event.pointerId);
-        }
-      }
-
-      view.addEventListener("pointerup", endDrag);
-      view.addEventListener("pointercancel", endDrag);
-
-      rafId = window.requestAnimationFrame(tick);
-
-      window.addEventListener("beforeunload", () => {
-        if (rafId) window.cancelAnimationFrame(rafId);
-        window.clearTimeout(resumeTimer);
-      });
-    }
-  }
 }
