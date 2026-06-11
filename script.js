@@ -1,30 +1,3 @@
-const truthBarrierData = [
-  {
-    symbol: "🎓",
-    title: "The Degree Trap",
-    copy: [
-      'You spent 3-4 years on a degree.<br><strong>Companies still ask:</strong><br>"But can you sell?"',
-      "<strong>MBA-style content, zero job outcomes.</strong><br>You learn slides and frameworks but can't prove execution in interviews.",
-    ],
-  },
-  {
-    symbol: "⛓️‍💥",
-    title: "The Skills Gap",
-    copy: [
-      "College taught frameworks.<br>Not how to write a cold email,<br>run a discovery call, or<br>build a pipeline.",
-      "<strong>Cold applications go nowhere.</strong><br>Without proof-of-work and referrals, resumes get ignored by recruiters.",
-    ],
-  },
-  {
-    symbol: "🚪🔒",
-    title: "The Network Gap",
-    copy: [
-      "You don't know anyone at<br>the companies you want to<br>work at. No warm intros.<br>No insider access.",
-      "<strong>You need a network, not just notes.</strong><br>Career growth is peer-driven and mentor-led, not solo YouTube learning.",
-    ],
-  },
-];
-
 const aboutAssetData = [
   {
     title: "Live Campaigns",
@@ -233,70 +206,6 @@ if (assetsWheel) {
   } else {
     setActiveAsset(0, { hovered: true });
   }
-}
-
-const truthBarriers = document.querySelector("[data-truth-barriers]");
-
-if (truthBarriers) {
-  const tabs = Array.from(truthBarriers.querySelectorAll("[data-truth-tab]"));
-  const panel = truthBarriers.querySelector("[data-truth-panel]");
-  const panelInner = truthBarriers.querySelector("[data-truth-panel-inner]");
-  const panelSymbol = truthBarriers.querySelector("[data-truth-panel-symbol]");
-  const panelTitle = truthBarriers.querySelector("[data-truth-panel-title]");
-  const panelCopy = truthBarriers.querySelector("[data-truth-panel-copy]");
-  let activeIndex = 0;
-
-  const renderTruthBarrier = (index) => {
-    const item = truthBarrierData[index];
-    if (!item || !panel) return;
-
-    activeIndex = index;
-    panelSymbol.textContent = item.symbol;
-    panelTitle.textContent = item.title;
-    panelCopy.innerHTML = item.copy.map((paragraph) => `<p>${paragraph}</p>`).join("");
-    panel.setAttribute("aria-labelledby", `truth-tab-${index}`);
-    panelInner.classList.remove("is-updating");
-    void panelInner.offsetWidth;
-    panelInner.classList.add("is-updating");
-
-    tabs.forEach((tab, tabIndex) => {
-      const isActive = tabIndex === index;
-      tab.classList.toggle("is-active", isActive);
-      tab.setAttribute("aria-selected", String(isActive));
-    });
-  };
-
-  tabs.forEach((tab) => {
-    const index = Number(tab.dataset.truthTab);
-
-    tab.addEventListener("click", () => {
-      renderTruthBarrier(index);
-    });
-
-    tab.addEventListener("mouseenter", () => {
-      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-        renderTruthBarrier(index);
-      }
-    });
-
-    tab.addEventListener("keydown", (event) => {
-      let nextIndex = null;
-
-      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        nextIndex = (index + 1) % tabs.length;
-      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        nextIndex = (index - 1 + tabs.length) % tabs.length;
-      }
-
-      if (nextIndex !== null) {
-        event.preventDefault();
-        tabs[nextIndex].focus();
-        renderTruthBarrier(nextIndex);
-      }
-    });
-  });
-
-  renderTruthBarrier(0);
 }
 
 const trackTabs = document.querySelectorAll(".track-tab");
