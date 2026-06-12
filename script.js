@@ -239,12 +239,126 @@ trackTabs.forEach((tab) => {
   });
 });
 
-/**
- * Google Sheets lead capture — paste your Apps Script Web App URL here after setup.
- * Leave empty to only save leads in the browser (not recommended for production).
- * Setup guide: see GOOGLE_SHEETS_SETUP.txt in this folder.
- */
-const LEADS_SHEET_WEBHOOK_URL = "";
+const PHONE_LENGTH_RULES = {
+  "+91": { length: 10 },
+  "+1": { length: 10 },
+  "+44": { minLength: 10, maxLength: 11 },
+  "+971": { length: 9 },
+  "+966": { length: 9 },
+  "+65": { length: 8 },
+  "+61": { length: 9 },
+  "+49": { minLength: 10, maxLength: 11 },
+  "+33": { length: 9 },
+  "+81": { minLength: 10, maxLength: 11 },
+  "+86": { length: 11 },
+};
+
+function getCountryCodes() {
+  return window.APEX_COUNTRY_CODES || [];
+}
+
+function initCountryCodeSelects() {
+  const countries = getCountryCodes();
+  if (!countries.length) return;
+
+  document.querySelectorAll("[data-country-code-select]").forEach((select) => {
+    if (select.options.length > 0) return;
+
+    countries.forEach(({ country, code }) => {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = `${country} (${code})`;
+      option.dataset.country = country;
+      select.appendChild(option);
+    });
+
+    select.value = "+91";
+    updateCountryCodeDisplay(select);
+    select.addEventListener("change", () => updateCountryCodeDisplay(select));
+  });
+}
+
+function updateCountryCodeDisplay(select) {
+  const selected = select.selectedOptions[0];
+  const country = selected?.dataset.country || "";
+  const display = select.closest(".phone-code-field")?.querySelector(".phone-code-display");
+
+  if (display) display.textContent = select.value;
+  select.title = country ? `${country} (${select.value})` : select.value;
+}
+
+function normalizePhoneLocal(countryCode, rawInput) {
+  let digits = rawInput.trim().replace(/\D/g, "");
+  if (!digits) return "";
+
+  const codeDigits = countryCode.replace(/\D/g, "");
+  if (digits.startsWith(codeDigits) && digits.length > codeDigits.length + 3) {
+    digits = digits.slice(codeDigits.length);
+  }
+
+  if (countryCode === "+91" && digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  }
+
+  return digits;
+}
+
+function validatePhoneNumber(countryCode, digits) {
+  if (!digits) return false;
+
+  const rule = PHONE_LENGTH_RULES[countryCode];
+  if (rule?.length) return digits.length === rule.length;
+  if (rule?.minLength && rule?.maxLength) {
+    return digits.length >= rule.minLength && digits.length <= rule.maxLength;
+  }
+
+  return digits.length >= 4 && digits.length <= 15;
+}
+
+function getLeadFormValidationMessage(fields) {
+  if (!fields.name) return "Please enter your full name.";
+  if (!fields.isEmailValid) return "Please enter a valid email address.";
+  if (!fields.phoneLocal) return "Please enter your WhatsApp number.";
+  if (!fields.isPhoneValid) {
+    return `Please enter a valid WhatsApp number for ${fields.countryCode} (numbers only, no spaces).`;
+  }
+  if (!fields.track) return "Please select a track.";
+  if (!fields.status) return "Please select your current status.";
+  return "Please fill in all fields with valid details.";
+}
+
+function readLeadFormFields(form) {
+  const name = form.elements.namedItem("name")?.value.trim() || "";
+  const email = form.elements.namedItem("email")?.value.trim() || "";
+  const countryCode = form.elements.namedItem("countryCode")?.value || "+91";
+  const phoneLocal = normalizePhoneLocal(
+    countryCode,
+    form.elements.namedItem("phone")?.value || ""
+  );
+  const track = form.elements.namedItem("track")?.value || "";
+  const status = form.elements.namedItem("status")?.value || "";
+  const source = form.elements.namedItem("source")?.value || "unknown";
+
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isPhoneValid = validatePhoneNumber(countryCode, phoneLocal);
+  const phone = phoneLocal ? `${countryCode} ${phoneLocal}` : "";
+
+  return {
+    name,
+    email,
+    phone,
+    phoneLocal,
+    countryCode,
+    track,
+    status,
+    source,
+    isEmailValid,
+    isPhoneValid,
+    isComplete: Boolean(name && isEmailValid && isPhoneValid && track && status),
+  };
+}
+
+initCountryCodeSelects();
 
 function saveLeadLocally(leadPayload) {
   const existingLeads = JSON.parse(localStorage.getItem("apex_union_leads") || "[]");
@@ -252,30 +366,83 @@ function saveLeadLocally(leadPayload) {
   localStorage.setItem("apex_union_leads", JSON.stringify(existingLeads));
 }
 
+function getGoogleSheetWebAppUrl() {
+  return (window.APEX_CONFIG && window.APEX_CONFIG.GOOGLE_SHEET_WEB_APP_URL) || "";
+}
+
+function submitLeadViaHiddenForm(webhookUrl, leadPayload) {
+  const iframeName = `apex-lead-iframe-${Date.now()}`;
+  const iframe = document.createElement("iframe");
+  iframe.name = iframeName;
+  iframe.hidden = true;
+  iframe.style.cssText = "display:none;width:0;height:0;border:0";
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = webhookUrl;
+  form.target = iframeName;
+  form.style.display = "none";
+
+  Object.entries(leadPayload).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value ?? "";
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(iframe);
+  document.body.appendChild(form);
+  form.submit();
+
+  window.setTimeout(() => {
+    form.remove();
+    iframe.remove();
+  }, 10000);
+}
+
+function syncLeadToGoogleSheet(webhookUrl, leadPayload) {
+  const body = new URLSearchParams(leadPayload);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 4000);
+
+  fetch(webhookUrl, {
+    method: "POST",
+    mode: "cors",
+    redirect: "follow",
+    keepalive: true,
+    body,
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      let result = { ok: response.ok };
+      try {
+        result = await response.json();
+      } catch {
+        // Apps Script may return HTML on redirect; treat non-error responses as success
+      }
+
+      if (!response.ok || result.ok === false) {
+        submitLeadViaHiddenForm(webhookUrl, leadPayload);
+      }
+    })
+    .catch(() => {
+      submitLeadViaHiddenForm(webhookUrl, leadPayload);
+    })
+    .finally(() => {
+      window.clearTimeout(timeoutId);
+    });
+}
+
 async function submitLead(leadPayload) {
   saveLeadLocally(leadPayload);
 
-  if (!LEADS_SHEET_WEBHOOK_URL) {
-    return { ok: true, sheet: false };
+  const webhookUrl = getGoogleSheetWebAppUrl();
+  if (webhookUrl) {
+    syncLeadToGoogleSheet(webhookUrl, leadPayload);
   }
 
-  const response = await fetch(LEADS_SHEET_WEBHOOK_URL, {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(leadPayload),
-  });
-
-  if (!response.ok) {
-    throw new Error("Could not save your application. Please try again.");
-  }
-
-  const result = await response.json();
-  if (!result.ok) {
-    throw new Error(result.error || "Could not save your application.");
-  }
-
-  return { ok: true, sheet: true };
+  return { ok: true };
 }
 
 const leadModal = document.querySelector("#lead-modal");
@@ -353,42 +520,35 @@ if (leadForm) {
   leadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const name = leadForm.name.value.trim();
-    const email = leadForm.email.value.trim();
-    const phone = leadForm.phone.value.trim();
-    const track = leadForm.track.value;
-    const status = leadForm.status.value;
-    const source = leadForm.source.value || "unknown";
+    const fields = readLeadFormFields(leadForm);
 
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const isPhoneValid = !phone || /^[0-9]{10}$/.test(phone);
-
-    if (!name || !isEmailValid || !isPhoneValid || !track || !status) {
-      leadFormMessage.textContent =
-        "Please enter valid details (name, email, optional 10-digit phone, track, and current status).";
+    if (!fields.isComplete) {
+      leadFormMessage.textContent = getLeadFormValidationMessage(fields);
       leadFormMessage.classList.add("is-error");
       return;
     }
 
     const leadPayload = {
-      name,
-      email,
-      phone,
-      track,
-      status,
-      source,
+      name: fields.name,
+      email: fields.email,
+      phone: fields.phone,
+      countryCode: fields.countryCode,
+      track: fields.track,
+      status: fields.status,
+      source: fields.source,
       submittedAt: new Date().toISOString(),
     };
 
     const submitButton = leadForm.querySelector(".lead-submit");
     if (submitButton) submitButton.disabled = true;
-    leadFormMessage.textContent = "Submitting…";
     leadFormMessage.classList.remove("is-error");
 
     try {
       await submitLead(leadPayload);
       leadFormMessage.textContent = "Thanks! Your application has been received.";
       leadForm.reset();
+      const leadCountryCode = leadForm.querySelector("[data-country-code-select]");
+      if (leadCountryCode) updateCountryCodeDisplay(leadCountryCode);
       setTimeout(() => {
         closeLeadModal();
         leadFormMessage.textContent = "";
@@ -400,105 +560,6 @@ if (leadForm) {
     } finally {
       if (submitButton) submitButton.disabled = false;
     }
-  });
-}
-
-const countupItems = document.querySelectorAll("[data-countup]");
-
-function animateCountup(element) {
-  const target = Number(element.dataset.target || "0");
-  const suffix = element.dataset.suffix || "";
-  const duration = 1400;
-  const startTime = performance.now();
-
-  function step(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const value = Math.round(target * eased);
-
-    element.textContent = `${value}${suffix}`;
-
-    if (progress < 1) {
-      requestAnimationFrame(step);
-      return;
-    }
-
-    const card = element.closest(".number-card");
-    if (card) {
-      card.classList.add("is-done");
-      setTimeout(() => {
-        card.classList.remove("is-done");
-      }, 900);
-    }
-  }
-
-  requestAnimationFrame(step);
-}
-
-if (countupItems.length > 0) {
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const numbersSection = document.querySelector("#numbers");
-  let hasPlayedForCurrentView = false;
-
-  function setCountupToInitialValues() {
-    countupItems.forEach((item) => {
-      const suffix = item.dataset.suffix || "";
-      item.textContent = `0${suffix}`;
-      const card = item.closest(".number-card");
-      if (card) card.classList.remove("is-done");
-    });
-  }
-
-  function playCountup() {
-    countupItems.forEach((item) => {
-      if (reduceMotion) {
-        const target = Number(item.dataset.target || "0");
-        const suffix = item.dataset.suffix || "";
-        item.textContent = `${target}${suffix}`;
-      } else {
-        animateCountup(item);
-      }
-    });
-  }
-
-  if (numbersSection) {
-    setCountupToInitialValues();
-
-    const sectionObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasPlayedForCurrentView) {
-            hasPlayedForCurrentView = true;
-            playCountup();
-          } else if (!entry.isIntersecting) {
-            hasPlayedForCurrentView = false;
-            setCountupToInitialValues();
-          }
-        });
-      },
-      { threshold: 0.45 }
-    );
-
-    sectionObserver.observe(numbersSection);
-  }
-}
-
-const curriculumAccordion = document.querySelector("[data-curriculum-accordion]");
-
-if (curriculumAccordion) {
-  const curriculumToggles = curriculumAccordion.querySelectorAll(".curriculum-toggle");
-
-  curriculumToggles.forEach((toggle) => {
-    toggle.addEventListener("click", () => {
-      const panelId = toggle.getAttribute("aria-controls");
-      const panel = panelId ? document.getElementById(panelId) : null;
-      if (!panel) return;
-
-      const isExpanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", String(!isExpanded));
-      panel.hidden = isExpanded;
-    });
   });
 }
 
@@ -520,25 +581,6 @@ if (faqAccordion) {
   });
 }
 
-const seatsRemainingElement = document.querySelector("[data-live-seats]");
-
-if (seatsRemainingElement) {
-  const startValue = Number(seatsRemainingElement.dataset.start || "27");
-  const minValue = Number(seatsRemainingElement.dataset.min || "6");
-  let currentSeats = startValue;
-
-  seatsRemainingElement.textContent = String(currentSeats);
-
-  window.setInterval(() => {
-    if (currentSeats <= minValue) return;
-
-    // Randomized tiny drops simulate live demand without jarring jumps.
-    const decrement = Math.random() < 0.72 ? 1 : 2;
-    currentSeats = Math.max(minValue, currentSeats - decrement);
-    seatsRemainingElement.textContent = String(currentSeats);
-  }, 16000);
-}
-
 const inlineLeadForm = document.querySelector("#inline-lead-form");
 const inlineLeadMessage = document.querySelector("#inline-lead-message");
 
@@ -546,35 +588,27 @@ if (inlineLeadForm && inlineLeadMessage) {
   inlineLeadForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const name = inlineLeadForm.name.value.trim();
-    const email = inlineLeadForm.email.value.trim();
-    const phone = inlineLeadForm.phone.value.trim();
-    const track = inlineLeadForm.track.value;
-    const status = inlineLeadForm.status.value || "Not specified";
+    const fields = readLeadFormFields(inlineLeadForm);
 
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const isPhoneValid = /^[0-9]{10}$/.test(phone);
-
-    if (!name || !isEmailValid || !isPhoneValid || !track) {
-      inlineLeadMessage.textContent =
-        "Please enter a valid name, email, 10-digit WhatsApp number, and track.";
+    if (!fields.isComplete) {
+      inlineLeadMessage.textContent = getLeadFormValidationMessage(fields);
       inlineLeadMessage.classList.add("is-error");
       return;
     }
 
     const leadPayload = {
-      name,
-      email,
-      phone,
-      track,
-      status,
+      name: fields.name,
+      email: fields.email,
+      phone: fields.phone,
+      countryCode: fields.countryCode,
+      track: fields.track,
+      status: fields.status,
       source: "inline-enroll-section",
       submittedAt: new Date().toISOString(),
     };
 
     const submitButton = inlineLeadForm.querySelector(".enroll-submit");
     if (submitButton) submitButton.disabled = true;
-    inlineLeadMessage.textContent = "Submitting…";
     inlineLeadMessage.classList.remove("is-error");
 
     try {
@@ -582,6 +616,8 @@ if (inlineLeadForm && inlineLeadMessage) {
       inlineLeadMessage.textContent =
         "Great! You're in. Our team will share cohort details shortly.";
       inlineLeadForm.reset();
+      const inlineCountryCode = inlineLeadForm.querySelector("[data-country-code-select]");
+      if (inlineCountryCode) updateCountryCodeDisplay(inlineCountryCode);
     } catch (error) {
       inlineLeadMessage.textContent =
         error.message || "Something went wrong. Please try again.";
@@ -592,133 +628,8 @@ if (inlineLeadForm && inlineLeadMessage) {
   });
 }
 
-const testimonialsCarousel = document.querySelector("[data-testimonials-carousel]");
-const testimonialsTrack = document.querySelector("[data-testimonials-track]");
-const testimonialsDots = document.querySelector("[data-testimonials-dots]");
-
-if (testimonialsCarousel && testimonialsTrack && testimonialsDots) {
-  const testimonialCards = Array.from(testimonialsTrack.children);
-
-  function getCardsPerView() {
-    if (window.matchMedia("(max-width: 767px)").matches) return 1;
-    if (window.matchMedia("(max-width: 1024px)").matches) return 2;
-    return 3;
-  }
-
-  let cardsPerView = getCardsPerView();
-  let totalPages = Math.max(1, Math.ceil(testimonialCards.length / cardsPerView));
-  let currentPage = 0;
-  let autoPlayId = null;
-  let lastWheelSwitchAt = 0;
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  function buildDots() {
-    testimonialsDots.innerHTML = "";
-    for (let i = 0; i < totalPages; i += 1) {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = "testimonial-dot";
-      dot.setAttribute("aria-label", `Go to testimonial slide ${i + 1}`);
-      if (i === currentPage) dot.classList.add("is-active");
-      dot.addEventListener("click", () => {
-        currentPage = i;
-        updateCarousel(true);
-      });
-      testimonialsDots.appendChild(dot);
-    }
-  }
-
-  function updateDots() {
-    const dots = testimonialsDots.querySelectorAll(".testimonial-dot");
-    dots.forEach((dot, index) => {
-      dot.classList.toggle("is-active", index === currentPage);
-    });
-  }
-
-  function updateCarousel(useSmoothScroll = false) {
-    const targetIndex = currentPage * cardsPerView;
-    const targetCard = testimonialCards[targetIndex];
-    if (!targetCard) return;
-
-    if (!useSmoothScroll) {
-      const originalTransition = testimonialsTrack.style.transition;
-      testimonialsTrack.style.transition = "none";
-      testimonialsTrack.style.transform = `translateX(-${targetCard.offsetLeft}px)`;
-      requestAnimationFrame(() => {
-        testimonialsTrack.style.transition = originalTransition || "";
-      });
-    } else {
-      testimonialsTrack.style.transform = `translateX(-${targetCard.offsetLeft}px)`;
-    }
-
-    updateDots();
-  }
-
-  function startAutoplay() {
-    if (reduceMotion) return;
-    stopAutoplay();
-    autoPlayId = window.setInterval(() => {
-      currentPage = (currentPage + 1) % totalPages;
-      updateCarousel(true);
-    }, 3200);
-  }
-
-  function stopAutoplay() {
-    if (autoPlayId) {
-      window.clearInterval(autoPlayId);
-      autoPlayId = null;
-    }
-  }
-
-  function refreshCarouselLayout() {
-    cardsPerView = getCardsPerView();
-    totalPages = Math.max(1, Math.ceil(testimonialCards.length / cardsPerView));
-    currentPage = Math.min(currentPage, totalPages - 1);
-    buildDots();
-    updateCarousel(false);
-  }
-
-  testimonialsCarousel.addEventListener("mouseenter", stopAutoplay);
-  testimonialsCarousel.addEventListener("mouseleave", startAutoplay);
-  testimonialsCarousel.addEventListener(
-    "wheel",
-    (event) => {
-      if (totalPages <= 1) return;
-      const now = performance.now();
-      if (now - lastWheelSwitchAt < 260) return;
-
-      const deltaX = event.deltaX;
-      const deltaY = event.deltaY;
-      let direction = 0;
-
-      if (Math.abs(deltaY) >= Math.abs(deltaX) && Math.abs(deltaY) > 8) {
-        direction = deltaY > 0 ? 1 : -1;
-      } else if (Math.abs(deltaX) > 8) {
-        direction = deltaX > 0 ? 1 : -1;
-      }
-
-      if (direction === 0) return;
-      event.preventDefault();
-      stopAutoplay();
-
-      if (direction > 0) {
-        currentPage = Math.min(currentPage + 1, totalPages - 1);
-      } else {
-        currentPage = Math.max(currentPage - 1, 0);
-      }
-      updateCarousel(true);
-      lastWheelSwitchAt = now;
-    },
-    { passive: false }
-  );
-
-  refreshCarouselLayout();
-  startAutoplay();
-  window.addEventListener("resize", refreshCarouselLayout);
-}
-
 const animatedSections = document.querySelectorAll(
-  ".hero, .partners, .truth-section, .about-apex-section, .programme-structure-section, .founders-section, .mentors-section, .graduates-section, .numbers-section, .comparison-section, .audience-section, .admission-section, .enroll-section, .faq-section, .testimonials-section"
+  ".hero, .partners, .truth-section, .about-apex-section, .programme-structure-section, .founders-section, .mentors-section, .graduates-section, .comparison-section, .audience-section, .admission-section, .enroll-section, .faq-section"
 );
 const reduceMotionForReveal = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
