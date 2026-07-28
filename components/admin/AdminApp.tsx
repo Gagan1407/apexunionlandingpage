@@ -8,6 +8,7 @@ import {
   normalizeEnrollmentStatus,
   type EnrollmentStatus,
 } from "@/lib/enrollment";
+import { getSupabaseAnonKey, getSyncEnrollmentUrl } from "@/lib/public-env";
 import { createClient, type LeadRow } from "@/lib/supabase/client";
 
 type SessionState = "loading" | "anon" | "authed" | "denied" | "misconfigured";
@@ -72,13 +73,15 @@ async function syncEnrollmentSecure(
   enrollmentStatus: string,
   accessToken: string
 ) {
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!baseUrl || !anonKey) {
-    throw new Error("Supabase is not configured");
+  const syncUrl = getSyncEnrollmentUrl();
+  const anonKey = getSupabaseAnonKey();
+  if (!syncUrl || !anonKey) {
+    throw new Error(
+      "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Netlify (or your host) and redeploy."
+    );
   }
 
-  const response = await fetch(`${baseUrl}/functions/v1/sync-enrollment`, {
+  const response = await fetch(syncUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -335,13 +338,16 @@ export default function AdminApp() {
               Admin setup needed
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-[#1a0506]">
-              Set <code className="rounded bg-[#f7f1e4] px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
+              Set{" "}
+              <code className="rounded bg-[#f7f1e4] px-1.5 py-0.5">
+                NEXT_PUBLIC_SUPABASE_URL
+              </code>{" "}
               and{" "}
               <code className="rounded bg-[#f7f1e4] px-1.5 py-0.5">
                 NEXT_PUBLIC_SUPABASE_ANON_KEY
               </code>{" "}
-              in <code className="rounded bg-[#f7f1e4] px-1.5 py-0.5">.env.local</code>, then
-              restart the dev server.
+              in Netlify → Site configuration → Environment variables, then
+              trigger a new deploy (these values are baked in at build time).
             </p>
           </div>
         </div>

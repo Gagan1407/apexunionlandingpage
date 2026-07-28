@@ -2,6 +2,20 @@
 
 Next.js 16 + TypeScript + Tailwind marketing site for Apex Union, with Supabase lead capture and an `/admin` dashboard.
 
+## Deploy on Netlify
+
+1. Site settings → **Environment variables** → add (Production):
+
+| Variable | Value |
+|----------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://YOUR_PROJECT.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon key |
+| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `https://YOUR_PROJECT.supabase.co/functions/v1/submit-lead` (optional if URL above is set) |
+
+2. **Redeploy** after saving vars (`NEXT_PUBLIC_*` are baked in at **build** time).
+3. Build settings: use Next.js (this repo includes `netlify.toml`). Do **not** set Publish directory to `out` or `dist`.
+4. Open `/admin` on the live site and sign in with your Supabase Auth admin user.
+
 ## Local development
 
 ```bash

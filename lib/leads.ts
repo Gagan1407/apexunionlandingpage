@@ -1,3 +1,5 @@
+import { getSubmitLeadUrl } from "@/lib/public-env";
+
 export type LeadPayload = {
   name: string;
   email: string;
@@ -150,10 +152,10 @@ async function syncLeadToEdgeFunction(
 export async function submitLead(leadPayload: LeadPayload) {
   saveLeadLocally(leadPayload);
 
-  const submitUrl = process.env.NEXT_PUBLIC_SUBMIT_LEAD_URL?.trim() || "";
+  const submitUrl = getSubmitLeadUrl();
   if (!submitUrl) {
     throw new Error(
-      "Lead submission is not configured. Set NEXT_PUBLIC_SUBMIT_LEAD_URL."
+      "Lead submission is not configured. Set NEXT_PUBLIC_SUPABASE_URL (or NEXT_PUBLIC_SUBMIT_LEAD_URL) in your host env vars and redeploy."
     );
   }
 
