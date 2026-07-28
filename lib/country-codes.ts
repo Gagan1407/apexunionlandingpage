@@ -1,5 +1,6 @@
 /** All countries with international dialing codes (sorted A–Z, India first). */
-window.APEX_COUNTRY_CODES = [
+export type CountryCode = { country: string; code: string };
+export const APEX_COUNTRY_CODES: CountryCode[] = [
   { country: "India", code: "+91" },
   { country: "Afghanistan", code: "+93" },
   { country: "Åland Islands", code: "+358" },
