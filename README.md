@@ -55,25 +55,37 @@ values ('YOUR_AUTH_USER_UUID', 'you@example.com');
 5. Generate a long random webhook secret (32+ chars), then set secrets and deploy:
 
 ```bash
-# In Google Apps Script: run setWebhookSecret("YOUR_SECRET") once, then redeploy the web app.
+# Generate: openssl rand -hex 32
+# In Google Apps Script: run setWebhookSecret("YOUR_NEW_SECRET") once, then redeploy the web app.
 
 supabase secrets set \
   GOOGLE_SHEET_WEB_APP_URL=https://script.google.com/macros/s/…/exec \
-  SHEETS_WEBHOOK_SECRET=YOUR_SECRET \
+  SHEETS_WEBHOOK_SECRET=YOUR_NEW_SECRET \
   --project-ref YOUR_PROJECT_REF
 
 supabase functions deploy submit-lead
 supabase functions deploy sync-enrollment
 ```
 
+Rotate immediately if any previous secret was committed to git.
 6. Set `NEXT_PUBLIC_SUBMIT_LEAD_URL` to the deployed `submit-lead` URL and restart the app.
 
 ## Google Sheets
 
-1. Paste `google-sheets/Code.gs` into Apps Script.
-2. Run `setupApexUnionLeadsSheet()`, `installLeadEditTrigger()`, and `setWebhookSecret("…")`.
-3. Deploy as Web App (Execute as: Me, Who has access: Anyone) — access is gated by the webhook secret, not by obscurity.
-4. Optionally run `setSupabaseSyncConfig(url, serviceRoleKey)` for Sheet → Supabase edits.
+Apps Script source is local-only (`google-sheets/Code.gs` is gitignored). Keep your copy outside git or in Apps Script.
+
+1. Paste your `Code.gs` into Apps Script (or open the existing project).
+2. Run `setupApexUnionLeadsSheet()` and `installLeadEditTrigger()`.
+3. Generate a **new** secret (`openssl rand -hex 32`). Do **not** reuse any secret that was ever committed to git.
+4. Run `setWebhookSecret("YOUR_NEW_SECRET")` in Apps Script.
+5. Deploy as Web App (Execute as: Me, Who has access: Anyone) — access is gated by the webhook secret.
+6. Set the same secret as `SHEETS_WEBHOOK_SECRET` in Supabase, then redeploy `submit-lead` and `sync-enrollment`.
+7. Optionally for Sheet → Supabase enrollment edits:
+   - Restrict Sheet editors to trusted admins only
+   - Run `setSupabaseSyncConfig(url, serviceRoleKey)`
+   - Run `enableSheetToSupabaseSync()` (opt-in; disabled by default)
+
+If an old secret was ever in the repo, treat it as compromised: rotate immediately and redeploy the web app (New version).
 
 ## Lead flow
 

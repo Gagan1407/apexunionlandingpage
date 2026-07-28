@@ -1,34 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
 const CONSENT_KEY = "apex_cookie_consent";
 
 type ConsentValue = "accepted" | "rejected";
 
+function subscribeConsent(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const handler = () => onStoreChange();
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
+function getConsentSnapshot() {
+  try {
+    return localStorage.getItem(CONSENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getServerConsentSnapshot() {
+  return "ssr";
+}
+
 export default function CookieBanner() {
-  const [visible, setVisible] = useState(false);
+  const stored = useSyncExternalStore(
+    subscribeConsent,
+    getConsentSnapshot,
+    getServerConsentSnapshot
+  );
+  const [localChoice, setLocalChoice] = useState<ConsentValue | null>(null);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CONSENT_KEY);
-      if (!stored) setVisible(true);
-    } catch {
-      setVisible(true);
-    }
-  }, []);
-
-  function save(value: ConsentValue) {
+  const save = useCallback((value: ConsentValue) => {
     try {
       localStorage.setItem(CONSENT_KEY, value);
     } catch {
       // ignore storage failures
     }
-    setVisible(false);
-  }
+    setLocalChoice(value);
+  }, []);
 
-  if (!visible) return null;
+  const resolved = localChoice ?? stored;
+  if (resolved === "ssr" || resolved === "accepted" || resolved === "rejected") {
+    return null;
+  }
 
   return (
     <div className="cookie-banner" role="dialog" aria-label="Cookie consent">

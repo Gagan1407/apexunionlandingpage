@@ -248,7 +248,11 @@ Deno.serve(async (req) => {
     }
 
     const forwarded = req.headers.get("x-forwarded-for") || "";
-    const ip = forwarded.split(",")[0]?.trim() || "";
+    const ip =
+      req.headers.get("cf-connecting-ip")?.trim() ||
+      req.headers.get("x-real-ip")?.trim() ||
+      forwarded.split(",")[0]?.trim() ||
+      "";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -263,22 +267,40 @@ Deno.serve(async (req) => {
       console.error("SHEETS_WEBHOOK_SECRET missing while sheet URL is set");
     }
 
+    if (!ip) {
+      return json(
+        {
+          ok: false,
+          error: "Unable to verify request. Please try again.",
+        },
+        403
+      );
+    }
+
     const supabase = createClient(supabaseUrl, serviceRole, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     const now = new Date();
     const sinceIso = new Date(now.getTime() - RATE_LIMIT_WINDOW_MS).toISOString();
-    const ipHash = ip ? await hashIp(ip) : null;
+    const ipHash = await hashIp(ip);
 
-    if (ipHash) {
+    {
       const { count: ipCount, error: ipCountError } = await supabase
         .from("leads")
         .select("id", { count: "exact", head: true })
         .eq("ip_hash", ipHash)
         .gte("created_at", sinceIso);
 
-      if (!ipCountError && (ipCount ?? 0) >= RATE_LIMIT_MAX_PER_IP) {
+      if (ipCountError) {
+        console.error(ipCountError);
+        return json(
+          { ok: false, error: "Temporarily unavailable. Please try again." },
+          503
+        );
+      }
+
+      if ((ipCount ?? 0) >= RATE_LIMIT_MAX_PER_IP) {
         return json(
           { ok: false, error: "Too many submissions. Please try again later." },
           429
@@ -293,7 +315,15 @@ Deno.serve(async (req) => {
         .eq("email", email)
         .gte("created_at", sinceIso);
 
-      if (!emailCountError && (emailCount ?? 0) >= RATE_LIMIT_MAX_PER_EMAIL) {
+      if (emailCountError) {
+        console.error(emailCountError);
+        return json(
+          { ok: false, error: "Temporarily unavailable. Please try again." },
+          503
+        );
+      }
+
+      if ((emailCount ?? 0) >= RATE_LIMIT_MAX_PER_EMAIL) {
         return json(
           { ok: false, error: "Too many submissions. Please try again later." },
           429

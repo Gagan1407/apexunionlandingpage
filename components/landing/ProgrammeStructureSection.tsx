@@ -13,7 +13,7 @@ export default function ProgrammeStructureSection() {
                 From Student to Job-Ready Professional in 12 Months
               </p>
               <p className="section-lead section-lead--dark">
-                Here's how we take you from classroom to offer letter — one milestone at a time.
+                Here&apos;s how we take you from classroom to offer letter — one milestone at a time.
               </p>
 
               <div className="programme-structure-rows stagger-children" aria-label="Programme timeline">

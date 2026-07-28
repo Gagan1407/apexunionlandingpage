@@ -22,7 +22,7 @@ export default function FaqSection() {
                   <div className="faq-panel" id="faq-1" hidden>
                     Fresh graduates and early-career professionals (0-2 years
                     experience) who want to build a high-paying career in Sales or
-                    Marketing. You don't need a sales or marketing background - you
+                    Marketing. You don&apos;t need a sales or marketing background - you
                     need drive, curiosity, and a willingness to do real work.
                   </div>
                 </article>
@@ -34,7 +34,7 @@ export default function FaqSection() {
                     aria-expanded="false"
                     aria-controls="faq-2"
                   >
-                    2. What's the difference between Track A and Track B?
+                    2. What&apos;s the difference between Track A and Track B?
                   </button>
                   <div className="faq-panel" id="faq-2" hidden>
                     Track A (Sales &amp; BD) trains you for revenue-generating roles
@@ -109,7 +109,7 @@ export default function FaqSection() {
                     Every mentor at Apex Union is a practitioner with direct
                     experience in the role they teach. We do not use academic faculty
                     as primary teachers. Mentors are vetted for real outcomes - quota
-                    attainment, campaigns they've run, revenue they've generated.
+                    attainment, campaigns they&apos;ve run, revenue they&apos;ve generated.
                   </div>
                 </article>
 
@@ -173,7 +173,7 @@ export default function FaqSection() {
                     10. What city is the programme based in?
                   </button>
                   <div className="faq-panel" id="faq-10" hidden>
-                    Apex Union's Batch 1 campus is in Indore, Madhya Pradesh. This is
+                    Apex Union&apos;s Batch 1 campus is in Indore, Madhya Pradesh. This is
                     an in-person, residential-style programme. Students are expected
                     to attend in person for all sessions.
                   </div>

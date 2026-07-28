@@ -119,14 +119,6 @@ export function readLeadFormFields(form: HTMLFormElement): LeadFormFields {
   };
 }
 
-function saveLeadLocally(leadPayload: LeadPayload) {
-  const existingLeads = JSON.parse(
-    localStorage.getItem("apex_union_leads") || "[]"
-  ) as LeadPayload[];
-  existingLeads.push(leadPayload);
-  localStorage.setItem("apex_union_leads", JSON.stringify(existingLeads));
-}
-
 async function syncLeadToEdgeFunction(
   submitUrl: string,
   leadPayload: LeadPayload
@@ -150,8 +142,6 @@ async function syncLeadToEdgeFunction(
 }
 
 export async function submitLead(leadPayload: LeadPayload) {
-  saveLeadLocally(leadPayload);
-
   const submitUrl = getSubmitLeadUrl();
   if (!submitUrl) {
     throw new Error(

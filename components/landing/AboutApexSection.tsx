@@ -10,7 +10,7 @@ export default function AboutApexSection() {
                 Apex Union gives you a career.
               </p>
               <p className="about-apex-body">
-                We don't do boring lectures. Every single class ends with a tangible,
+                We don&apos;t do boring lectures. Every single class ends with a tangible,
                 professional asset you can instantly show to employers.
               </p>
 
@@ -68,8 +68,8 @@ export default function AboutApexSection() {
               <div className="about-graduation-block">
                 <h3 className="about-graduation-heading">🎓 The Apex Standard</h3>
                 <p className="about-graduation-text">
-                  By graduation, you won't leave with a binder of notes. You will exit with a
-                  bulletproof portfolio and undeniable proof of work. Don't just tell companies
+                  By graduation, you won&apos;t leave with a binder of notes. You will exit with a
+                  bulletproof portfolio and undeniable proof of work. Don&apos;t just tell companies
                   what you can do—show them.
                 </p>
               </div>

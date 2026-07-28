@@ -64,16 +64,16 @@ export default function SiteFooter() {
               <h3 className="footer-col-title">Quick Links</h3>
               <ul className="footer-list">
                 <li>
-                  <a href="/#about-apex">About</a>
+                  <Link href="/#about-apex">About</Link>
                 </li>
                 <li>
-                  <a href="/#programme-structure">Program</a>
+                  <Link href="/#programme-structure">Program</Link>
                 </li>
                 <li>
-                  <a href="/#mba-comparison">Why Apex</a>
+                  <Link href="/#mba-comparison">Why Apex</Link>
                 </li>
                 <li>
-                  <a href="/#faq">FAQ</a>
+                  <Link href="/#faq">FAQ</Link>
                 </li>
               </ul>
             </div>

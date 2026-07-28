@@ -131,7 +131,14 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function AdminApp() {
-  const [sessionState, setSessionState] = useState<SessionState>("loading");
+  const supabaseConfigured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  const [sessionState, setSessionState] = useState<SessionState>(() =>
+    supabaseConfigured ? "loading" : "misconfigured"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -141,11 +148,6 @@ export default function AdminApp() {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const supabaseConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
 
   const supabase = useMemo(() => {
     if (!supabaseConfigured) return null;
@@ -157,10 +159,7 @@ export default function AdminApp() {
   }, [supabaseConfigured]);
 
   useEffect(() => {
-    if (!supabase) {
-      setSessionState("misconfigured");
-      return;
-    }
+    if (!supabase) return;
 
     let cancelled = false;
 

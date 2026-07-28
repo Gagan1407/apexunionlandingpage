@@ -11,7 +11,7 @@ export default function ComparisonSection() {
               </h2>
               <p className="comparison-kicker">MBA vs Apex</p>
               <p className="section-lead section-lead--light">
-                Still weighing your options? Here's an honest side-by-side — no brochure fluff.
+                Still weighing your options? Here&apos;s an honest side-by-side — no brochure fluff.
               </p>
 
               <div className="comparison-table-wrap table-scroll-wrap" role="region" aria-label="MBA vs Apex Union comparison">

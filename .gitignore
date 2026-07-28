@@ -46,6 +46,10 @@ credentials.json
 *.p12
 *.key
 
+# Apps Script lives in Google; keep local only (avoids secret/history leaks)
+google-sheets/Code.gs
+google-sheets/*.gs
+
 # vercel
 .vercel
 
