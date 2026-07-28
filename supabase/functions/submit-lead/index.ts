@@ -162,14 +162,29 @@ function syncLeadToSheetInBackground(options: {
 
       if (res.ok && sheetJson.ok === true && (sheetJson.row || sheetJson.leadId)) {
         sheetSyncedAt = new Date().toISOString();
+      } else if (res.ok && sheetJson.ok === true && sheetJson.error) {
+        sheetSyncError = String(sheetJson.error);
+      } else if (
+        res.ok &&
+        sheetJson.ok === true &&
+        (sheetJson as { service?: string }).service
+      ) {
+        sheetSyncError =
+          "Sheets returned health check instead of write result — redeploy Apps Script web app";
       } else if (res.ok && sheetJson.ok === true) {
         sheetSyncError = "Sheets sync returned OK without write confirmation";
       } else {
-        sheetSyncError =
-          sheetJson.error ||
-          `Sheets sync failed (${res.status})${
-            text && !sheetJson.ok ? `: ${text.slice(0, 180)}` : ""
-          }`;
+        const errText = sheetJson.error || "";
+        if (/unauthorized/i.test(errText)) {
+          sheetSyncError =
+            "Unauthorized — SHEETS_WEBHOOK_SECRET must match Apps Script setWebhookSecret()";
+        } else {
+          sheetSyncError =
+            errText ||
+            `Sheets sync failed (${res.status})${
+              text && !sheetJson.ok ? `: ${text.slice(0, 180)}` : ""
+            }`;
+        }
       }
     } catch (err) {
       sheetSyncError = String(err);
@@ -338,11 +353,20 @@ Deno.serve(async (req) => {
           createdAtIst,
         },
       });
-    } else if (sheetUrl && !webhookSecret) {
+    } else if (!sheetUrl) {
       await supabase
         .from("leads")
         .update({
-          sheet_sync_error: "SHEETS_WEBHOOK_SECRET not configured",
+          sheet_sync_error:
+            "GOOGLE_SHEET_WEB_APP_URL not set in Edge Function secrets",
+        })
+        .eq("id", lead.id);
+    } else {
+      await supabase
+        .from("leads")
+        .update({
+          sheet_sync_error:
+            "SHEETS_WEBHOOK_SECRET not set in Edge Function secrets (must match Apps Script setWebhookSecret)",
         })
         .eq("id", lead.id);
     }
