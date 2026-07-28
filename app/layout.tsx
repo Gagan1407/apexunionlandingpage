@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "APEX UNION | Sales & Marketing Career Programme",
   description:
     "Apex Union — Industry-led Sales & Marketing programme with placement assistance. Learn from practitioners, build a real portfolio, and launch your career.",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.png", sizes: "180x180", type: "image/png" },
+    ],
+    apple: [{ url: "/favicon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/favicon-32.png",
+  },
 };
 
 export const viewport: Viewport = {
