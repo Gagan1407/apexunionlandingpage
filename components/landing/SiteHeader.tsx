@@ -52,7 +52,9 @@ export default function SiteHeader() {
             aria-expanded="false"
             data-open-mobile-nav
           >
-            ☰
+            <span className="mobile-nav-toggle-bar" aria-hidden="true" />
+            <span className="mobile-nav-toggle-bar" aria-hidden="true" />
+            <span className="mobile-nav-toggle-bar" aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -64,13 +66,32 @@ export default function SiteHeader() {
           data-close-mobile-nav
         ></button>
         <aside className="mobile-sidebar-panel" aria-label="Mobile navigation">
-          <button
-            className="mobile-sidebar-close"
-            type="button"
-            data-close-mobile-nav
-          >
-            &times;
-          </button>
+          <div className="mobile-sidebar-top">
+            <div className="mobile-sidebar-brand">
+              <img
+                className="mobile-sidebar-mark"
+                src={APEX_MARK_SRC}
+                alt=""
+                width={40}
+                height={40}
+                decoding="async"
+                aria-hidden="true"
+              />
+              <div className="mobile-sidebar-brand-copy">
+                <span className="mobile-sidebar-brand-text">{APEX_BRAND_NAME}</span>
+                <span className="mobile-sidebar-brand-tag">Industry-led careers</span>
+              </div>
+            </div>
+            <button
+              className="mobile-sidebar-close"
+              type="button"
+              aria-label="Close navigation menu"
+              data-close-mobile-nav
+            >
+              <span className="mobile-sidebar-close-icon" aria-hidden="true" />
+            </button>
+          </div>
+          <p className="mobile-sidebar-eyebrow">Navigate</p>
           <nav className="mobile-sidebar-nav">
             <a href="#about-apex" data-close-mobile-nav>
               About
@@ -87,6 +108,11 @@ export default function SiteHeader() {
             <a href="#faq" data-close-mobile-nav>
               FAQ
             </a>
+          </nav>
+          <div className="mobile-sidebar-footer">
+            <p className="mobile-sidebar-footer-note">
+              Sales &amp; Marketing · Placement assistance
+            </p>
             <a
               className="btn btn-primary mobile-sidebar-cta"
               href="#apply"
@@ -95,7 +121,7 @@ export default function SiteHeader() {
             >
               Apply Now
             </a>
-          </nav>
+          </div>
         </aside>
       </div>
     </>

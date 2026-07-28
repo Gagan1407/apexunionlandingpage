@@ -4,7 +4,6 @@ import TruthSection from "@/components/landing/TruthSection";
 import AboutApexSection from "@/components/landing/AboutApexSection";
 import ProgrammeStructureSection from "@/components/landing/ProgrammeStructureSection";
 import MentorsSection from "@/components/landing/MentorsSection";
-import ConsultationBanner from "@/components/landing/ConsultationBanner";
 import PartnersSection from "@/components/landing/PartnersSection";
 import ComparisonSection from "@/components/landing/ComparisonSection";
 import AudienceSection from "@/components/landing/AudienceSection";
@@ -26,7 +25,6 @@ export default function HomePage() {
         <AboutApexSection />
         <ProgrammeStructureSection />
         <MentorsSection />
-        <ConsultationBanner source="consult-banner-mentors" />
         <PartnersSection />
         <ComparisonSection />
         <AudienceSection />
