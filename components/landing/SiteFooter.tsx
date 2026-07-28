@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APEX_LOGO_ALT, APEX_LOGO_SRC } from "@/lib/brand";
+import { APEX_BRAND_NAME, APEX_MARK_ALT, APEX_MARK_SRC } from "@/lib/brand";
 
 export default function SiteFooter() {
   return (
@@ -7,16 +7,19 @@ export default function SiteFooter() {
       <div className="footer-main">
         <div className="wrap footer-layout">
           <div className="footer-brand">
-            <a className="footer-logo-link" href="#top" aria-label="Apex Union home">
+            <a className="footer-logo-link" href="#top">
               <img
-                className="footer-logo-img"
-                src={APEX_LOGO_SRC}
-                alt={APEX_LOGO_ALT}
-                width={180}
-                height={180}
+                className="footer-logo-mark"
+                src={APEX_MARK_SRC}
+                alt=""
+                width={64}
+                height={64}
                 loading="lazy"
                 decoding="async"
+                aria-hidden="true"
               />
+              <span className="footer-logo-text">{APEX_BRAND_NAME}</span>
+              <span className="sr-only">{APEX_MARK_ALT}</span>
             </a>
             <p className="footer-tagline">Where ambition meets industry.</p>
           </div>

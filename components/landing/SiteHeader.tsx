@@ -1,19 +1,22 @@
-import { APEX_LOGO_ALT, APEX_LOGO_SRC } from "@/lib/brand";
+import { APEX_BRAND_NAME, APEX_MARK_ALT, APEX_MARK_SRC } from "@/lib/brand";
 
 export default function SiteHeader() {
   return (
     <>
       <header className="site-header">
         <div className="site-header-inner wrap">
-          <a className="site-logo" href="#top" aria-label="Apex Union home">
+          <a className="site-logo" href="#top">
             <img
-              className="site-logo-img"
-              src={APEX_LOGO_SRC}
-              alt={APEX_LOGO_ALT}
-              width={160}
-              height={160}
+              className="site-logo-mark"
+              src={APEX_MARK_SRC}
+              alt=""
+              width={64}
+              height={64}
               decoding="async"
+              aria-hidden="true"
             />
+            <span className="site-logo-text">{APEX_BRAND_NAME}</span>
+            <span className="sr-only">{APEX_MARK_ALT}</span>
           </a>
           <div className="site-header-actions">
             <nav className="site-nav" aria-label="Primary">
@@ -85,6 +88,7 @@ export default function SiteHeader() {
               FAQ
             </a>
             <a
+              className="btn btn-primary mobile-sidebar-cta"
               href="#apply"
               data-lead-source="mobile-nav-cta"
               data-close-mobile-nav
