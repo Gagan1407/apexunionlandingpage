@@ -143,11 +143,16 @@ export default function AdminApp() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [leadsTotal, setLeadsTotal] = useState(0);
+  const [sheetErrorCount, setSheetErrorCount] = useState(0);
+  const [page, setPage] = useState(0);
   const [trackFilter, setTrackFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const PAGE_SIZE = 50;
 
   const supabase = useMemo(() => {
     if (!supabaseConfigured) return null;
@@ -211,17 +216,30 @@ export default function AdminApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, sessionState]);
 
-  async function loadLeads(showLoading = true) {
+  async function loadLeads(showLoading = true, pageIndex = page) {
     if (!supabase) return;
     if (showLoading) setBusy(true);
     setAuthError("");
 
-    const { data, error } = await supabase
-      .from("leads")
-      .select(
-        "id, full_name, email, phone, country_code, track, current_status, enrollment_status, source, client_submitted_at, created_at, created_at_ist, sheet_synced_at, sheet_sync_error, sheet_extra"
-      )
-      .order("created_at", { ascending: false });
+    const from = pageIndex * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const [listResult, errorCountResult] = await Promise.all([
+      supabase
+        .from("leads")
+        .select(
+          "id, full_name, email, phone, country_code, track, current_status, enrollment_status, source, client_submitted_at, created_at, created_at_ist, sheet_synced_at, sheet_sync_error, sheet_extra",
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to),
+      supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .not("sheet_sync_error", "is", null),
+    ]);
+
+    const { data, error, count } = listResult;
 
     if (error) {
       if (error.code === "42501" || /permission|rls|policy/i.test(error.message)) {
@@ -238,6 +256,9 @@ export default function AdminApp() {
     }
 
     setLeads((data || []) as LeadRow[]);
+    setLeadsTotal(count ?? (data || []).length);
+    setSheetErrorCount(errorCountResult.count ?? 0);
+    setPage(pageIndex);
     setSessionState("authed");
     setBusy(false);
   }
@@ -479,7 +500,8 @@ export default function AdminApp() {
               Leads & Enrollment
             </h1>
             <p className="mt-1.5 text-sm text-[#fdfad4]">
-              Live feed · IST · showing {filteredLeads.length} of {leads.length}
+              Live feed · IST · page {page + 1} · showing {filteredLeads.length}{" "}
+              of {leadsTotal}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -521,6 +543,16 @@ export default function AdminApp() {
             </div>
           ))}
         </section>
+
+        {sheetErrorCount > 0 ? (
+          <p
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status"
+          >
+            {sheetErrorCount} lead{sheetErrorCount === 1 ? "" : "s"} failed Sheet
+            sync. Check Sheet sync / Supabase secrets, then refresh.
+          </p>
+        ) : null}
 
         {authError ? (
           <p
@@ -705,9 +737,30 @@ export default function AdminApp() {
               </tbody>
             </table>
           </div>
-          <p className="border-t border-[#510f11]/08 bg-[#fbf7ef] px-4 py-2 text-xs text-[#32090a] sm:px-5">
-            Scroll left or right to view all columns when needed.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#510f11]/08 bg-[#fbf7ef] px-4 py-3 sm:px-5">
+            <p className="text-xs text-[#32090a]">
+              Page {page + 1} of {Math.max(1, Math.ceil(leadsTotal / PAGE_SIZE))} ·{" "}
+              {leadsTotal} total
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-[#510f11]/20 bg-white px-3 py-1.5 text-xs font-semibold text-[#1a0506] disabled:opacity-40"
+                disabled={busy || page <= 0}
+                onClick={() => void loadLeads(true, page - 1)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-[#510f11]/20 bg-white px-3 py-1.5 text-xs font-semibold text-[#1a0506] disabled:opacity-40"
+                disabled={busy || (page + 1) * PAGE_SIZE >= leadsTotal}
+                onClick={() => void loadLeads(true, page + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </section>
       </div>
     </AdminShell>

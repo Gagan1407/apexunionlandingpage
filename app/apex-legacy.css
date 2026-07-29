@@ -41,9 +41,9 @@
   --white: #f6f4ef;
   --gold-line: var(--border-gold);
   --page-gutter: clamp(1rem, 4vw, 1.5rem);
-  --font-display: "Outfit", "Montserrat", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Montserrat", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-accent: "Kalam", "Comic Sans MS", cursive;
+  --font-display: var(--font-outfit), "Outfit", "Montserrat", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: var(--font-montserrat), "Montserrat", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-accent: var(--font-kalam), "Kalam", "Comic Sans MS", cursive;
   --genz-coral: #ff6b4a;
   --genz-peach: #ff9f43;
   --genz-lemon: #ffe566;
@@ -790,20 +790,19 @@ main > section {
   isolation: isolate;
 }
 
-/* Blurred hero image (desktop: light blur) */
+/* Hero image: pre-blurred via Cloudinary (no live CSS blur on LCP) */
 .hero::after {
   content: "";
   position: absolute;
-  inset: -24px;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   background-color: #0a0a0a;
-  background-image: url("https://res.cloudinary.com/dz1681irz/image/upload/v1785241410/ChatGPT_Image_Jul_28_2026_05_52_18_PM_jz2nbl.png");
+  background-image: url("https://res.cloudinary.com/dz1681irz/image/upload/e_blur:600,q_auto,f_auto,c_fill,g_auto,w_1920/v1785241410/ChatGPT_Image_Jul_28_2026_05_52_18_PM_jz2nbl.png");
   background-size: cover;
   background-position: 68% center;
   background-repeat: no-repeat;
-  filter: blur(3px) brightness(0.82);
-  transform: scale(1.04);
+  filter: brightness(0.82);
 }
 
 /* Dark left gradient for copy; right stays clearer */

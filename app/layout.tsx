@@ -1,6 +1,28 @@
 import type { Metadata, Viewport } from "next";
+import { Kalam, Montserrat, Outfit } from "next/font/google";
 import CookieBanner from "@/components/legal/CookieBanner";
 import "./globals.css";
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-outfit",
+  display: "swap",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
+
+const kalam = Kalam({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-kalam",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "APEX UNION | Sales & Marketing Career Programme",
@@ -28,20 +50,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Montserrat:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>
+    <html
+      lang="en"
+      className={`${outfit.variable} ${montserrat.variable} ${kalam.variable}`}
+    >
+      <body className={montserrat.className}>
         {children}
         <CookieBanner />
       </body>

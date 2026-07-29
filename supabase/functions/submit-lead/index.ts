@@ -1,11 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+function resolveCorsOrigin(req: Request) {
+  const allowed = (Deno.env.get("ALLOWED_ORIGINS") || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const origin = req.headers.get("Origin") || "";
+  if (allowed.length === 0) return "*";
+  if (origin && allowed.includes(origin)) return origin;
+  return allowed[0];
+}
+
+function corsHeadersFor(req: Request) {
+  return {
+    "Access-Control-Allow-Origin": resolveCorsOrigin(req),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+}
 
 type LeadBody = {
   name?: string;
@@ -28,10 +42,16 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_PER_IP = 8;
 const RATE_LIMIT_MAX_PER_EMAIL = 5;
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, req?: Request) {
+  const cors = req ? corsHeadersFor(req) : {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 
@@ -210,11 +230,11 @@ function syncLeadToSheetInBackground(options: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeadersFor(req) });
   }
 
   if (req.method !== "POST") {
-    return json({ ok: false, error: "Method not allowed" }, 405);
+    return json({ ok: false, error: "Method not allowed" }, 405, req);
   }
 
   try {
@@ -234,17 +254,18 @@ Deno.serve(async (req) => {
           ok: false,
           error: "Missing required fields: name, email, phone, track, status",
         },
-        400
+        400,
+        req
       );
     }
 
     if (!isValidEmail(email)) {
-      return json({ ok: false, error: "Invalid email address" }, 400);
+      return json({ ok: false, error: "Invalid email address" }, 400, req);
     }
 
     const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 8 || phoneDigits.length > 15) {
-      return json({ ok: false, error: "Invalid phone number" }, 400);
+      return json({ ok: false, error: "Invalid phone number" }, 400, req);
     }
 
     const forwarded = req.headers.get("x-forwarded-for") || "";
@@ -260,7 +281,7 @@ Deno.serve(async (req) => {
     const webhookSecret = Deno.env.get("SHEETS_WEBHOOK_SECRET")?.trim() || "";
 
     if (!supabaseUrl || !serviceRole) {
-      return json({ ok: false, error: "Server misconfigured" }, 500);
+      return json({ ok: false, error: "Server misconfigured" }, 500, req);
     }
 
     if (sheetUrl && !webhookSecret) {
@@ -273,7 +294,8 @@ Deno.serve(async (req) => {
           ok: false,
           error: "Unable to verify request. Please try again.",
         },
-        403
+        403,
+        req
       );
     }
 
@@ -296,14 +318,16 @@ Deno.serve(async (req) => {
         console.error(ipCountError);
         return json(
           { ok: false, error: "Temporarily unavailable. Please try again." },
-          503
+          503,
+          req
         );
       }
 
       if ((ipCount ?? 0) >= RATE_LIMIT_MAX_PER_IP) {
         return json(
           { ok: false, error: "Too many submissions. Please try again later." },
-          429
+          429,
+          req
         );
       }
     }
@@ -319,14 +343,16 @@ Deno.serve(async (req) => {
         console.error(emailCountError);
         return json(
           { ok: false, error: "Temporarily unavailable. Please try again." },
-          503
+          503,
+          req
         );
       }
 
       if ((emailCount ?? 0) >= RATE_LIMIT_MAX_PER_EMAIL) {
         return json(
           { ok: false, error: "Too many submissions. Please try again later." },
-          429
+          429,
+          req
         );
       }
     }
@@ -358,7 +384,7 @@ Deno.serve(async (req) => {
 
     if (insertError || !lead) {
       console.error(insertError);
-      return json({ ok: false, error: "Failed to save lead" }, 500);
+      return json({ ok: false, error: "Failed to save lead" }, 500, req);
     }
 
     if (sheetUrl && webhookSecret) {
@@ -402,9 +428,9 @@ Deno.serve(async (req) => {
     }
 
     // Do not return lead UUID to anonymous clients.
-    return json({ ok: true });
+    return json({ ok: true }, 200, req);
   } catch (err) {
     console.error(err);
-    return json({ ok: false, error: "Unexpected server error" }, 500);
+    return json({ ok: false, error: "Unexpected server error" }, 500, req);
   }
 });

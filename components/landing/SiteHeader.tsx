@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { APEX_BRAND_NAME, APEX_MARK_ALT, APEX_MARK_SRC } from "@/lib/brand";
 
 export default function SiteHeader() {
@@ -6,13 +7,13 @@ export default function SiteHeader() {
       <header className="site-header">
         <div className="site-header-inner wrap">
           <a className="site-logo" href="#top">
-            <img
+            <Image
               className="site-logo-mark"
               src={APEX_MARK_SRC}
               alt=""
               width={64}
               height={64}
-              decoding="async"
+              priority
               aria-hidden="true"
             />
             <span className="site-logo-text">{APEX_BRAND_NAME}</span>
@@ -68,13 +69,12 @@ export default function SiteHeader() {
         <aside className="mobile-sidebar-panel" aria-label="Mobile navigation">
           <div className="mobile-sidebar-top">
             <div className="mobile-sidebar-brand">
-              <img
+              <Image
                 className="mobile-sidebar-mark"
                 src={APEX_MARK_SRC}
                 alt=""
                 width={40}
                 height={40}
-                decoding="async"
                 aria-hidden="true"
               />
               <div className="mobile-sidebar-brand-copy">

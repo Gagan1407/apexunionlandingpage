@@ -1,4 +1,4 @@
-import { getSubmitLeadUrl } from "@/lib/public-env";
+import { getSubmitLeadUrl, getSupabaseAnonKey } from "@/lib/public-env";
 
 export type LeadPayload = {
   name: string;
@@ -123,9 +123,18 @@ async function syncLeadToEdgeFunction(
   submitUrl: string,
   leadPayload: LeadPayload
 ) {
+  const anon = getSupabaseAnonKey();
   const response = await fetch(submitUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(anon
+        ? {
+            apikey: anon,
+            Authorization: `Bearer ${anon}`,
+          }
+        : {}),
+    },
     body: JSON.stringify(leadPayload),
   });
 

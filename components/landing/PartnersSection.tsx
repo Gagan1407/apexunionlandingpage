@@ -1,3 +1,5 @@
+import { CLD_LOGO, withCloudinaryTransform } from "@/lib/cloudinary";
+
 const PARTNER_LOGOS = [
   {
     src: "https://res.cloudinary.com/dz1681irz/image/upload/v1785241674/swiggy-logo_izfc1k_wnn7bs.svg",
@@ -66,7 +68,11 @@ function PartnerLogoGroup({ duplicate = false }: { duplicate?: boolean }) {
             key={`${duplicate ? "dup-" : ""}${logo.alt}`}
           >
             <img
-              src={logo.src}
+              src={
+                logo.src.includes(".svg")
+                  ? logo.src
+                  : withCloudinaryTransform(logo.src, CLD_LOGO)
+              }
               alt={duplicate ? "" : logo.alt}
               width="140"
               height="46"

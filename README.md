@@ -34,11 +34,16 @@ Design styles live in `app/apex-legacy.css`. Tailwind is used for the admin UI a
 
 | Variable | Where | Purpose |
 |----------|--------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` | Public anon key (RLS protects data) |
-| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `.env.local` | Edge Function URL for lead capture |
+| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / Netlify | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` / Netlify | Public anon key (RLS protects data) |
+| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `.env.local` / Netlify | Edge Function URL for lead capture |
 | `GOOGLE_SHEET_WEB_APP_URL` | **Supabase secret only** | Apps Script webhook URL — never `NEXT_PUBLIC_*` |
 | `SHEETS_WEBHOOK_SECRET` | **Supabase secret + Apps Script** | Shared secret required on every Sheet write |
+| `ALLOWED_ORIGINS` | **Supabase secret (optional)** | Comma-separated site origins for `submit-lead` CORS |
+
+Health check: `GET /api/health` (uptime monitors).
+
+See `SECURITY.md` for webhook secret rotation.
 
 ## Supabase setup (once)
 

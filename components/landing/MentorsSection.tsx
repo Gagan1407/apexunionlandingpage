@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { CLD_PHOTO, withCloudinaryTransform } from "@/lib/cloudinary";
+
 export default function MentorsSection() {
   return (
     <section className="mentors-section" id="mentors" aria-labelledby="mentors-heading">
@@ -15,12 +18,17 @@ export default function MentorsSection() {
               <div className="mentor-grid stagger-children" aria-label="Mentor profiles">
                 <article className="mentor-profile-card mentor-profile-card--left" data-track="Sales">
                   <div className="mentor-profile-media">
-                    <img
+                    <Image
                       className="mentor-photo"
-                      src="https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/Saurabh_Sengupta_zk5ra4.jpg"
+                      src={withCloudinaryTransform(
+                        "https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/Saurabh_Sengupta_zk5ra4.jpg",
+                        CLD_PHOTO
+                      )}
                       alt="Portrait of Saurabh SenGupta"
-                      loading="lazy"
-                      decoding="async" />
+                      width={400}
+                      height={500}
+                      sizes="(max-width: 767px) 90vw, 360px"
+                    />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>
                   <div className="mentor-profile-body">
@@ -103,24 +111,34 @@ export default function MentorsSection() {
                     </div>
                   </div>
                   <div className="mentor-profile-media">
-                    <img
+                    <Image
                       className="mentor-photo"
-                      src="https://res.cloudinary.com/dz1681irz/image/upload/v1785241672/Adhish_Rane_zpsb7n_jfogoc.png"
+                      src={withCloudinaryTransform(
+                        "https://res.cloudinary.com/dz1681irz/image/upload/v1785241672/Adhish_Rane_zpsb7n_jfogoc.png",
+                        CLD_PHOTO
+                      )}
                       alt="Portrait of Adhish Rane"
-                      loading="lazy"
-                      decoding="async" />
+                      width={400}
+                      height={500}
+                      sizes="(max-width: 767px) 90vw, 360px"
+                    />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>
                 </article>
 
                 <article className="mentor-profile-card mentor-profile-card--left" data-track="Marketing">
                   <div className="mentor-profile-media">
-                    <img
+                    <Image
                       className="mentor-photo"
-                      src="https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/Vipul_Maini_s7mthh.jpg"
+                      src={withCloudinaryTransform(
+                        "https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/Vipul_Maini_s7mthh.jpg",
+                        CLD_PHOTO
+                      )}
                       alt="Portrait of Vipul Maini"
-                      loading="lazy"
-                      decoding="async" />
+                      width={400}
+                      height={500}
+                      sizes="(max-width: 767px) 90vw, 360px"
+                    />
                     <span className="mentor-track-badge">Track: Marketing</span>
                   </div>
                   <div className="mentor-profile-body">
@@ -200,12 +218,17 @@ export default function MentorsSection() {
                     </div>
                   </div>
                   <div className="mentor-profile-media">
-                    <img
+                    <Image
                       className="mentor-photo"
-                      src="https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/WhatsApp_Image_2026-05-11_at_17.46.23_rrdclb.jpg"
+                      src={withCloudinaryTransform(
+                        "https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/WhatsApp_Image_2026-05-11_at_17.46.23_rrdclb.jpg",
+                        CLD_PHOTO
+                      )}
                       alt="Portrait of Srivardhan Vanamalai"
-                      loading="lazy"
-                      decoding="async" />
+                      width={400}
+                      height={500}
+                      sizes="(max-width: 767px) 90vw, 360px"
+                    />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>
                 </article>
