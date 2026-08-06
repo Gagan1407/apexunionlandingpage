@@ -1,6 +1,7 @@
 name: Main backup check
 
-# main holds the original/backup codebase — verify it still builds when updated.
+# main holds the original/backup codebase (currently the pre-Next static site).
+# Only run a Node build when package.json exists.
 on:
   push:
     branches: [main]
@@ -13,18 +14,39 @@ concurrency:
 
 jobs:
   backup-build:
-    name: Backup branch build
+    name: Backup branch check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - name: Detect project type
+        id: kind
+        run: |
+          if [ -f package.json ]; then
+            echo "type=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=static" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Static backup present
+        if: steps.kind.outputs.type == 'static'
+        run: |
+          echo "main is a static backup (no package.json). Skipping Node build."
+          ls -la
+
       - uses: actions/setup-node@v4
+        if: steps.kind.outputs.type == 'next'
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run build
+
+      - name: Install & verify Next app
+        if: steps.kind.outputs.type == 'next'
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
