@@ -4,6 +4,67 @@ Next.js 16 + TypeScript + Tailwind marketing site for Apex Union, with Supabase 
 
 Requires **Node.js 22+** (see `.nvmrc` / `package.json` `engines`).
 
+## Branches & CI/CD
+
+| Branch | Role |
+|--------|------|
+| `main` | Backup of the original codebase (build check only) |
+| `dev` | Integration / testing of new work |
+| `prod` | Live production |
+
+**Promotion path:** open a Pull Request **`dev` → `prod`**. Direct PRs into `prod` from other branches are blocked by CI.
+
+### What GitHub Actions runs
+
+| Workflow | When | What |
+|----------|------|------|
+| `CI` | push/PR to `dev` or `prod` | `lint` → `typecheck` → `build` |
+| `Docker` | push/PR to `dev` or `prod` | Build image, smoke-test `/api/health`; **push to GHCR only on `prod`** |
+| `Prod branch guard` | PRs into `prod` | Source branch must be `dev` |
+| `Main backup check` | push/PR to `main` | `typecheck` + `build` |
+
+Production image tags on GHCR:
+
+- `ghcr.io/<owner>/<repo>:prod`
+- `ghcr.io/<owner>/<repo>:latest`
+- `ghcr.io/<owner>/<repo>:<short-sha>`
+
+### GitHub repository secrets (required for real prod images)
+
+Settings → Secrets and variables → Actions:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUBMIT_LEAD_URL`
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- `NEXT_PUBLIC_SITE_URL` (optional; defaults to `https://www.apexunion.com`)
+
+Runtime secrets on the VPS / host (not baked into the image):
+
+- `TURNSTILE_SECRET_KEY`
+- `LEAD_PROXY_SECRET`
+
+### Docker (local or VPS)
+
+```bash
+cp .env.example .env.docker
+# fill NEXT_PUBLIC_* + TURNSTILE_SECRET_KEY + LEAD_PROXY_SECRET
+
+npm run docker:build
+npm run docker:up
+# health: curl http://localhost:3000/api/health
+```
+
+Pull the published prod image on a server:
+
+```bash
+docker pull ghcr.io/<owner>/<repo>:prod
+docker run -d --name apex-web -p 3000:3000 \
+  -e TURNSTILE_SECRET_KEY=… \
+  -e LEAD_PROXY_SECRET=… \
+  ghcr.io/<owner>/<repo>:prod
+```
+
 ## Deploy (any Next.js host)
 
 ```bash

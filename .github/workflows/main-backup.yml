@@ -1,0 +1,33 @@
+name: Main backup check
+
+# main holds the original/backup codebase — verify it still builds when updated.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: main-backup-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup-build:
+    name: Backup branch build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+          NEXT_PUBLIC_SUBMIT_LEAD_URL: https://example.supabase.co/functions/v1/submit-lead
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ci-turnstile-site-key
+          NEXT_PUBLIC_SITE_URL: https://www.apexunion.com

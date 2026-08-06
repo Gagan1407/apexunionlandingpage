@@ -1,0 +1,21 @@
+name: Prod branch guard
+
+# Enforces branch model: live code on prod must arrive from dev via PR.
+on:
+  pull_request:
+    branches: [prod]
+
+jobs:
+  from-dev-only:
+    name: Require PR source = dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check head branch
+        run: |
+          set -euo pipefail
+          echo "PR ${{ github.event.pull_request.number }}: ${{ github.head_ref }} → ${{ github.base_ref }}"
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "::error::PRs into prod must come from the 'dev' branch (got '${{ github.head_ref }}')."
+            exit 1
+          fi
+          echo "OK — promoting from dev → prod"

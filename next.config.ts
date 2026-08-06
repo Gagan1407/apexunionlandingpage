@@ -35,6 +35,8 @@ const securityHeaders = [
   },
 ];
 const nextConfig: NextConfig = {
+  // Required for the production Docker image (smaller runtime).
+  output: "standalone",
   images: {
     remotePatterns: [
       {

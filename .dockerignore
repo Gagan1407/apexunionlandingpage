@@ -1,0 +1,46 @@
+# Dependencies & build output
+node_modules
+npm-debug.log*
+.pnpm-store
+.next
+out
+build
+dist
+coverage
+*.tsbuildinfo
+
+# Git / IDE / local tooling
+.git
+.github
+.cursor
+.vscode
+.idea
+*.md
+!.env.example
+
+# Env & secrets — never bake into the image
+.env
+.env.*
+!.env.example
+*.local
+credentials.json
+**/service-account*.json
+**/google-credentials*.json
+*.pem
+*.p12
+*.key
+
+# Apps Script (local only)
+google-sheets
+
+# Misc
+.DS_Store
+.turbo
+.eslintcache
+.cache
+.vercel
+supabase/.temp
+supabase/.branches
+Dockerfile*
+docker-compose*
+.dockerignore
