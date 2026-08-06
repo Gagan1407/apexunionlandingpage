@@ -1,0 +1,118 @@
+name: 3-Branch CI/CD Pipeline
+
+# Branch model:
+#   dev  → testing / staging (CI)
+#   prod → live production source (CI; host deploys from this branch)
+#   main → backup / stable (CI when Next app exists; otherwise skip Node build)
+#
+# Flow:  dev --(PR/merge)--> prod --(backup)--> main
+# Hosting (Vercel/Netlify): set Production branch = prod.
+
+on:
+  push:
+    branches: [dev, prod, main]
+  pull_request:
+    branches: [dev, prod, main]
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect project type
+        id: kind
+        run: |
+          if [ -f package.json ]; then
+            echo "type=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=static" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Static backup (no Node app on this branch)
+        if: steps.kind.outputs.type == 'static'
+        run: |
+          echo "No package.json — treating branch as static backup."
+          echo "Skipping lint / test / Next build."
+          ls -la
+
+      - name: Setup Node.js
+        if: steps.kind.outputs.type == 'next'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.kind.outputs.type == 'next'
+        run: npm ci
+
+      - name: Run lint
+        if: steps.kind.outputs.type == 'next'
+        run: npm run lint --if-present
+
+      - name: Run typecheck
+        if: steps.kind.outputs.type == 'next'
+        run: npm run typecheck --if-present
+
+      - name: Run tests
+        if: steps.kind.outputs.type == 'next'
+        run: npm test --if-present
+
+      - name: Build Next.js app
+        if: steps.kind.outputs.type == 'next'
+        env:
+          # Public placeholders so CI can build without production secrets.
+          # Real NEXT_PUBLIC_* values are set on the host (Vercel/Netlify/VPS).
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+          NEXT_PUBLIC_SUBMIT_LEAD_URL: https://example.supabase.co/functions/v1/submit-lead
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ci-turnstile-site-key
+          NEXT_PUBLIC_SITE_URL: https://www.apexunion.com
+        run: npm run build
+
+  branch-info:
+    name: Branch environment
+    runs-on: ubuntu-latest
+    needs: test-and-build
+
+    steps:
+      - name: Show deployment target
+        run: |
+          set -euo pipefail
+          BRANCH="${{ github.ref_name }}"
+          # On pull requests, ref_name is the PR merge ref — use head_ref for clarity.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }} → ${{ github.base_ref }}"
+          fi
+
+          echo "Ref: ${{ github.ref }}"
+          echo "Branch: $BRANCH"
+          echo "Event: ${{ github.event_name }}"
+          echo ""
+
+          case "${{ github.base_ref || github.ref_name }}" in
+            dev)
+              echo "Environment: Development / Testing"
+              echo "Action: CI only (host preview optional)"
+              ;;
+            prod)
+              echo "Environment: LIVE PRODUCTION"
+              echo "Action: CI must pass — host should deploy from prod"
+              ;;
+            main)
+              echo "Environment: Backup / Stable"
+              echo "Action: Backup check only — no live deploy"
+              ;;
+            *)
+              echo "Environment: Other ($BRANCH)"
+              ;;
+          esac

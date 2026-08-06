@@ -8,28 +8,42 @@ Requires **Node.js 22+** (see `.nvmrc` / `package.json` `engines`).
 
 | Branch | Role |
 |--------|------|
-| `main` | Backup of the original codebase (build check only) |
-| `dev` | Integration / testing of new work |
-| `prod` | Live production |
+| `dev` | Developers push here — testing / staging |
+| `prod` | Live production source (set Netlify/Vercel **Production branch** = `prod`) |
+| `main` | Backup / stable copy of production |
 
-**Promotion path:** open a Pull Request **`dev` → `prod`**. Direct PRs into `prod` from other branches are blocked by CI.
+**Flow:** `dev` → (test) → `prod` → (backup) → `main`
 
-### What GitHub Actions runs
+### GitHub Actions
 
 | Workflow | When | What |
 |----------|------|------|
-| `CI` | push/PR to `dev` or `prod` | `lint` → `typecheck` → `build` |
-| `Docker` | push/PR to `dev` or `prod` | Build image, smoke-test `/api/health`; **push to GHCR only on `prod`** |
-| `Prod branch guard` | PRs into `prod` | Source branch must be `dev` |
-| `Main backup check` | push/PR to `main` | `typecheck` + `build` |
+| **3-Branch CI/CD Pipeline** (`ci-cd.yml`) | push/PR to `dev`, `prod`, `main` | lint → typecheck → test (if present) → build |
+| **Docker** | push/PR to `dev` or `prod` | Build image + health smoke; **push to GHCR on `prod` only** |
+| **Prod branch guard** | PRs into `prod` | Source branch must be `dev` |
 
-Production image tags on GHCR:
+On `main`, if there is no `package.json` (static backup), the Node build is skipped.
 
-- `ghcr.io/<owner>/<repo>:prod`
-- `ghcr.io/<owner>/<repo>:latest`
-- `ghcr.io/<owner>/<repo>:<short-sha>`
+### Daily commands
 
-### GitHub repository secrets (required for real prod images)
+```bash
+# Develop
+git checkout dev
+# ... changes ...
+git add . && git commit -m "New feature" && git push origin dev
+
+# Promote to production (prefer a PR: base=prod, compare=dev)
+git checkout prod
+git merge dev
+git push origin prod
+
+# Backup production onto main
+git checkout main
+git merge prod
+git push origin main
+```
+
+### GitHub repository secrets (for Docker prod images)
 
 Settings → Secrets and variables → Actions:
 
@@ -39,7 +53,7 @@ Settings → Secrets and variables → Actions:
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
 - `NEXT_PUBLIC_SITE_URL` (optional; defaults to `https://www.apexunion.com`)
 
-Runtime secrets on the VPS / host (not baked into the image):
+Runtime secrets on the host (not baked into CI placeholders):
 
 - `TURNSTILE_SECRET_KEY`
 - `LEAD_PROXY_SECRET`
