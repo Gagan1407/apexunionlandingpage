@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CLD_LOGO, withCloudinaryTransform } from "@/lib/cloudinary";
 
 const PARTNER_LOGOS = [
@@ -67,17 +68,17 @@ function PartnerLogoGroup({ duplicate = false }: { duplicate?: boolean }) {
             className={`logo-marquee-item${sizeClass}`}
             key={`${duplicate ? "dup-" : ""}${logo.alt}`}
           >
-            <img
+            <Image
               src={
                 logo.src.includes(".svg")
                   ? logo.src
                   : withCloudinaryTransform(logo.src, CLD_LOGO)
               }
               alt={duplicate ? "" : logo.alt}
-              width="140"
-              height="46"
+              width={140}
+              height={46}
               loading="lazy"
-              decoding="async"
+              unoptimized={logo.src.includes(".svg")}
             />
           </div>
         );

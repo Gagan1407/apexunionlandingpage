@@ -11,7 +11,12 @@ import {
 import { getSupabaseAnonKey, getSyncEnrollmentUrl } from "@/lib/public-env";
 import { createClient, type LeadRow } from "@/lib/supabase/client";
 
-type SessionState = "loading" | "anon" | "authed" | "denied" | "misconfigured";
+type SessionState =
+  | "loading"
+  | "anon"
+  | "authed"
+  | "denied"
+  | "misconfigured";
 
 function formatIstDisplay(iso: string | null, fallbackIst: string | null) {
   if (fallbackIst) return fallbackIst;
@@ -77,24 +82,36 @@ async function syncEnrollmentSecure(
   const anonKey = getSupabaseAnonKey();
   if (!syncUrl || !anonKey) {
     throw new Error(
-      "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Netlify (or your host) and redeploy."
+      "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your host environment and redeploy."
     );
   }
 
-  const response = await fetch(syncUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      apikey: anonKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      leadId: lead.id,
-      enrollmentStatus,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(syncUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: anonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        leadId: lead.id,
+        enrollmentStatus,
+      }),
+    });
+  } catch {
+    throw new Error(
+      "Failed to reach enrollment sync (often CORS). Add this page’s origin to Supabase ALLOWED_ORIGINS (e.g. http://localhost:3001) and redeploy sync-enrollment."
+    );
+  }
 
-  let result: { ok?: boolean; error?: string; sheetSynced?: boolean } = {
+  let result: {
+    ok?: boolean;
+    error?: string;
+    sheetSynced?: boolean;
+    reason?: string;
+  } = {
     ok: response.ok,
   };
   try {
@@ -107,7 +124,14 @@ async function syncEnrollmentSecure(
     throw new Error(result.error || "Failed to update enrollment status");
   }
 
-  return result;
+  return {
+    sheetSynced: result.sheetSynced !== false,
+    sheetWarning:
+      result.sheetSynced === false
+        ? result.reason ||
+          "Enrollment saved, but Google Sheets sync failed."
+        : "",
+  };
 }
 
 function AdminShell({ children }: { children: React.ReactNode }) {
@@ -145,6 +169,7 @@ export default function AdminApp() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [leadsTotal, setLeadsTotal] = useState(0);
   const [sheetErrorCount, setSheetErrorCount] = useState(0);
+  const [recentSheetErrors, setRecentSheetErrors] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [trackFilter, setTrackFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -180,13 +205,15 @@ export default function AdminApp() {
 
     bootstrap();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         setSessionState("anon");
         setLeads([]);
         return;
       }
-      void loadLeads();
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        void loadLeads();
+      }
     });
 
     return () => {
@@ -224,7 +251,7 @@ export default function AdminApp() {
     const from = pageIndex * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    const [listResult, errorCountResult] = await Promise.all([
+    const [listResult, errorCountResult, recentErrorsResult] = await Promise.all([
       supabase
         .from("leads")
         .select(
@@ -237,6 +264,12 @@ export default function AdminApp() {
         .from("leads")
         .select("id", { count: "exact", head: true })
         .not("sheet_sync_error", "is", null),
+      supabase
+        .from("leads")
+        .select("sheet_sync_error")
+        .not("sheet_sync_error", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(8),
     ]);
 
     const { data, error, count } = listResult;
@@ -258,6 +291,14 @@ export default function AdminApp() {
     setLeads((data || []) as LeadRow[]);
     setLeadsTotal(count ?? (data || []).length);
     setSheetErrorCount(errorCountResult.count ?? 0);
+    const uniqueErrors = Array.from(
+      new Set(
+        (recentErrorsResult.data || [])
+          .map((row) => String(row.sheet_sync_error || "").trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 3);
+    setRecentSheetErrors(uniqueErrors);
     setPage(pageIndex);
     setSessionState("authed");
     setBusy(false);
@@ -280,6 +321,7 @@ export default function AdminApp() {
       return;
     }
 
+    setBusy(false);
     await loadLeads();
   }
 
@@ -310,13 +352,27 @@ export default function AdminApp() {
 
     try {
       const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("Your session expired. Please sign in again.");
+      }
+
+      const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error("Your session expired. Please sign in again.");
       }
 
-      await syncEnrollmentSecure(lead, nextStatus, session.access_token);
+      await syncEnrollmentSecure(lead, nextStatus, session.access_token).then(
+        (result) => {
+          if (result.sheetWarning) {
+            setAuthError(result.sheetWarning);
+          }
+        }
+      );
     } catch (err) {
       setLeads((prev) =>
         prev.map((row) =>
@@ -366,8 +422,8 @@ export default function AdminApp() {
               <code className="rounded bg-[#f7f1e4] px-1.5 py-0.5">
                 NEXT_PUBLIC_SUPABASE_ANON_KEY
               </code>{" "}
-              in Netlify → Site configuration → Environment variables, then
-              trigger a new deploy (these values are baked in at build time).
+              in your host environment variables, then
+              trigger a new build/deploy (these values are baked in at build time).
             </p>
           </div>
         </div>
@@ -400,7 +456,7 @@ export default function AdminApp() {
                 Admin Console
               </h1>
               <p className="mt-2 text-sm text-[#fdfad4]">
-                Sign in to manage leads and enrollment.
+                Sign in with your admin email and password.
               </p>
             </div>
             <form onSubmit={onLogin} className="space-y-4 px-8 py-7">
@@ -545,13 +601,29 @@ export default function AdminApp() {
         </section>
 
         {sheetErrorCount > 0 ? (
-          <p
-            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
             role="status"
           >
-            {sheetErrorCount} lead{sheetErrorCount === 1 ? "" : "s"} failed Sheet
-            sync. Check Sheet sync / Supabase secrets, then refresh.
-          </p>
+            <p className="font-semibold">
+              {sheetErrorCount} lead{sheetErrorCount === 1 ? "" : "s"} failed
+              Sheet sync
+            </p>
+            <p className="mt-1 text-amber-900">
+              Old failed rows keep this flag until a successful rewrite. After
+              rotating secrets, submit a <strong>new</strong> test lead — or
+              change enrollment on a row to retry Sheets.
+            </p>
+            {recentSheetErrors.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5 font-mono text-xs text-amber-950">
+                {recentSheetErrors.map((msg) => (
+                  <li key={msg} className="break-all">
+                    {msg}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
 
         {authError ? (
@@ -722,13 +794,18 @@ export default function AdminApp() {
                         <td className="whitespace-nowrap px-4 py-3.5 text-[#1a0506]">
                           {lead.source || "—"}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3.5">
+                        <td className="min-w-[14rem] max-w-[22rem] px-4 py-3.5">
                           <span
                             title={sheet.title}
                             className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ring-1 ${sheet.className}`}
                           >
                             {sheet.label}
                           </span>
+                          {lead.sheet_sync_error ? (
+                            <p className="mt-1.5 break-words font-mono text-[11px] leading-snug text-[#7a2424]">
+                              {lead.sheet_sync_error}
+                            </p>
+                          ) : null}
                         </td>
                       </tr>
                     );

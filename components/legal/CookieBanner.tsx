@@ -52,8 +52,8 @@ export default function CookieBanner() {
     <div className="cookie-banner" role="dialog" aria-label="Cookie consent">
       <div className="cookie-banner-inner wrap">
         <p className="cookie-banner-text">
-          We use cookies to run this site and, with your permission, to improve
-          it. See our <Link href="/cookies">Cookie Policy</Link> and{" "}
+          We use essential cookies to keep this site working. See our{" "}
+          <Link href="/cookies">Cookie Policy</Link> and{" "}
           <Link href="/privacy">Privacy Policy</Link>.
         </p>
         <div className="cookie-banner-actions">

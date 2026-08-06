@@ -3,7 +3,7 @@ import { CLD_PHOTO, withCloudinaryTransform } from "@/lib/cloudinary";
 
 const FOUNDERS = [
   {
-    src: "https://res.cloudinary.com/dz1681irz/image/upload/v1785175867/Prabal_Monga_ww7rcq.jpg",
+    src: "https://res.cloudinary.com/dz1681irz/image/upload/v1785865498/prabal_monga__ww7rcq.jpg",
     alt: "Portrait of Prabal Monga",
     name: "Prabal Monga",
     role: "Head of Placement and Program",
@@ -21,7 +21,8 @@ const FOUNDERS = [
     alt: "Portrait of Yash Chhabra",
     name: "Yash Chhabra",
     role: "Head of Operations",
-    experience: null as string | null,
+    experience:
+      "Entrepreneur | 10+ Years Building Businesses Across Pharma, Infrastructure, Warehousing & Travel",
   },
 ] as const;
 
@@ -43,9 +44,9 @@ export default function FoundersSection() {
                 className="founder-photo"
                 src={withCloudinaryTransform(founder.src, CLD_PHOTO)}
                 alt={founder.alt}
-                width={320}
-                height={400}
-                sizes="(max-width: 767px) 70vw, 220px"
+                width={800}
+                height={800}
+                sizes="(max-width: 767px) 70vw, 200px"
               />
               <h3 className="founder-name">{founder.name}</h3>
               <p className="founder-role">{founder.role}</p>

@@ -12,6 +12,10 @@ export default function AdmissionSection() {
               <p className="section-lead section-lead--dark">
                 Three steps from webinar to offer.
               </p>
+              <p className="programme-key-facts">
+                Batch 1 · Indore (in-person) · Programme fee ₹8 lakh ·
+                Merit scholarships up to 50% (selected candidates)
+              </p>
               <div className="admission-timeline stagger-children" aria-label="Application steps">
                 <article className="admission-card admission-card--step-1">
                   <span className="admission-card-watermark" aria-hidden="true">01</span>
@@ -39,9 +43,9 @@ export default function AdmissionSection() {
                   <span className="admission-card-watermark" aria-hidden="true">03</span>
                   <div className="admission-card-body">
                     <span className="admission-step">Step 03</span>
-                    <h3 className="admission-card-title">Final Selection &amp; Scholarship up to 50%</h3>
+                    <h3 className="admission-card-title">Offer &amp; possible merit scholarship</h3>
                     <p className="admission-card-intro">
-                      Final offer with scholarship up to 50% based on your performance.
+                      Selected candidates may receive an offer; merit scholarships up to 50% are not automatic.
                     </p>
                   </div>
                 </article>

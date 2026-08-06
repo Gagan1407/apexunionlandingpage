@@ -3,7 +3,7 @@ import { getSubmitLeadUrl, getSupabaseUrl } from "@/lib/public-env";
 
 export const dynamic = "force-dynamic";
 
-/** Lightweight uptime / smoke probe for Netlify or external monitors. */
+/** Lightweight uptime / smoke probe for host or external monitors. */
 export async function GET() {
   const supabaseUrl = getSupabaseUrl();
   const submitLeadUrl = getSubmitLeadUrl();

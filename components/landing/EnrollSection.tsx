@@ -1,3 +1,7 @@
+"use client";
+
+import TurnstileField from "@/components/lead/TurnstileField";
+
 export default function EnrollSection() {
   return (
     <section
@@ -12,6 +16,10 @@ export default function EnrollSection() {
         </h2>
         <p className="section-lead section-lead--dark enroll-intro">
           Take the next step. Apply now and join the next Apex Union cohort.
+        </p>
+        <p className="programme-key-facts programme-key-facts--enroll">
+          Batch 1 · Indore, Madhya Pradesh · ₹8 lakh for 12 months · Merit
+          scholarships available
         </p>
 
         <div className="enroll-form-card">
@@ -112,6 +120,12 @@ export default function EnrollSection() {
               </select>
             </div>
 
+            <TurnstileField
+              containerId="inline-turnstile"
+              formId="inline-lead-form"
+              theme="light"
+            />
+
             <div className="enroll-form-actions">
               <button className="btn btn-primary enroll-submit" type="submit">
                 Apply Now
@@ -142,7 +156,7 @@ export default function EnrollSection() {
           No spam. No random calls. Just your cohort details and a call with our
           team.
         </p>
-        <p className="enroll-meta">Join 100+ students who started here</p>
+        <p className="enroll-meta">Now accepting Batch 1 applications</p>
       </div>
     </section>
   );

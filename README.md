@@ -2,25 +2,34 @@
 
 Next.js 16 + TypeScript + Tailwind marketing site for Apex Union, with Supabase lead capture and an `/admin` dashboard.
 
-## Deploy on Netlify
+Requires **Node.js 22+** (see `.nvmrc` / `package.json` `engines`).
 
-1. Site settings → **Environment variables** → add (Production):
+## Deploy (any Next.js host)
+
+```bash
+npm ci
+npm run build
+npm run start
+```
+
+Set these **production** environment variables on your host (then rebuild — `NEXT_PUBLIC_*` are baked in at build time):
 
 | Variable | Value |
 |----------|--------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://YOUR_PROJECT.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon key |
 | `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `https://YOUR_PROJECT.supabase.co/functions/v1/submit-lead` (optional if URL above is set) |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.yourdomain.com` (canonical URL for OG / robots / sitemap) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile **site** key |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile **secret** key (server-only on the Next host) |
 
-2. **Redeploy** after saving vars (`NEXT_PUBLIC_*` are baked in at **build** time).
-3. Build settings: use Next.js (this repo includes `netlify.toml`). Do **not** set Publish directory to `out` or `dist`.
-4. Open `/admin` on the live site and sign in with your Supabase Auth admin user.
+Point your custom domain DNS (A/CNAME) at the host, enable HTTPS, then open `/admin` and sign in with your Supabase Auth admin user.
 
 ## Local development
 
 ```bash
 cp .env.example .env.local
-# fill NEXT_PUBLIC_* values
+# fill NEXT_PUBLIC_* + TURNSTILE_SECRET_KEY
 npm install
 npm run dev
 ```
@@ -34,21 +43,26 @@ Design styles live in `app/apex-legacy.css`. Tailwind is used for the admin UI a
 
 | Variable | Where | Purpose |
 |----------|--------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / Netlify | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` / Netlify | Public anon key (RLS protects data) |
-| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `.env.local` / Netlify | Edge Function URL for lead capture |
+| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / host env | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` / host env | Public anon key (RLS protects data) |
+| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `.env.local` / host env | Edge Function URL for lead capture |
+| `NEXT_PUBLIC_SITE_URL` | `.env.local` / host env | Canonical site URL |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `.env.local` / host env | Turnstile site key (public) |
+| `TURNSTILE_SECRET_KEY` | Next host **and** Supabase secrets | Verifies captcha (Next + Edge; fail-closed) |
+| `ALLOWED_ORIGINS` | **Supabase secret (required for browser CORS)** | Comma-separated origins for Edge CORS |
 | `GOOGLE_SHEET_WEB_APP_URL` | **Supabase secret only** | Apps Script webhook URL — never `NEXT_PUBLIC_*` |
-| `SHEETS_WEBHOOK_SECRET` | **Supabase secret + Apps Script** | Shared secret required on every Sheet write |
-| `ALLOWED_ORIGINS` | **Supabase secret (optional)** | Comma-separated site origins for `submit-lead` CORS |
+| `SHEETS_WEBHOOK_SECRET` | **Supabase secret + Apps Script** | Shared secret on every Sheet write |
 
-Health check: `GET /api/health` (uptime monitors).
+Health check: `GET /api/health`. Robots: `/robots.txt`. Sitemap: `/sitemap.xml`.
 
-See `SECURITY.md` for webhook secret rotation.
+See `SECURITY.md` for Turnstile + webhook secret rotation.
 
 ## Supabase setup (once)
 
 1. Create a Supabase project.
-2. Apply migrations under `supabase/migrations/`.
+2. Apply the schema migration:
+   - **New project:** apply `supabase/migrations/20260805000000_apex_schema.sql`.
+   - **Already migrated from older split files:** do **not** re-run this as a fresh create if tables already exist — treat the squash as documentation / new environments only, or use `supabase migration repair` carefully.
 3. Auth → create an email/password user for admin.
 4. Insert allowlist row:
 
@@ -64,6 +78,8 @@ values ('YOUR_AUTH_USER_UUID', 'you@example.com');
 # In Google Apps Script: run setWebhookSecret("YOUR_NEW_SECRET") once, then redeploy the web app.
 
 supabase secrets set \
+  TURNSTILE_SECRET_KEY=your_turnstile_secret \
+  ALLOWED_ORIGINS=https://www.yourdomain.com,https://yourdomain.com,http://localhost:3000 \
   GOOGLE_SHEET_WEB_APP_URL=https://script.google.com/macros/s/…/exec \
   SHEETS_WEBHOOK_SECRET=YOUR_NEW_SECRET \
   --project-ref YOUR_PROJECT_REF
@@ -72,8 +88,8 @@ supabase functions deploy submit-lead
 supabase functions deploy sync-enrollment
 ```
 
-Rotate immediately if any previous secret was committed to git.
-6. Set `NEXT_PUBLIC_SUBMIT_LEAD_URL` to the deployed `submit-lead` URL and restart the app.
+Rotate immediately if any previous Sheets secret was committed to git.
+6. Set `NEXT_PUBLIC_SUBMIT_LEAD_URL` + Turnstile keys on the Next host and restart/rebuild the app.
 
 ## Google Sheets
 
@@ -94,6 +110,9 @@ If an old secret was ever in the repo, treat it as compromised: rotate immediate
 
 ## Lead flow
 
-Landing forms → `submit-lead` (validation + rate limits) → Supabase `leads` → authenticated Apps Script sync with `SHEETS_WEBHOOK_SECRET`.
+Landing forms → `POST /api/submit-lead` (Turnstile verify) → Edge `submit-lead`
+(trusted Next proxy header **or** Turnstile + rate limits) → Supabase `leads` →
+Apps Script sync with `SHEETS_WEBHOOK_SECRET`.
 
-Admin enrollment changes → `sync-enrollment` (admin JWT + `admin_users` check) → Supabase + Sheet.
+Admin enrollment changes → `sync-enrollment` (admin JWT + `admin_users` +
+`ALLOWED_ORIGINS`) → Supabase + Sheet.

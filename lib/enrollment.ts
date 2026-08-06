@@ -33,10 +33,6 @@ export function normalizeEnrollmentStatus(
   return STATUS_ALIASES[raw.toLowerCase()] ?? null;
 }
 
-export function isEnrollmentStatus(value: unknown): value is EnrollmentStatus {
-  return normalizeEnrollmentStatus(value) !== null;
-}
-
 export function countEnrollmentMetrics(
   leads: Array<{ enrollment_status?: string | null }>
 ) {

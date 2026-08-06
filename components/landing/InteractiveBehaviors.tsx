@@ -7,6 +7,7 @@ import {
   readLeadFormFields,
   submitLead,
 } from "@/lib/leads";
+import { readTurnstileToken, resetTurnstileInForm } from "@/lib/turnstile";
 
 const aboutAssetData = [
   {
@@ -304,16 +305,56 @@ export default function InteractiveBehaviors() {
     const closeMobileNavButtons = document.querySelectorAll(
       "[data-close-mobile-nav]"
     );
+    let lastFocusBeforeModal: HTMLElement | null = null;
+    let lastFocusBeforeNav: HTMLElement | null = null;
+    let leadModalVariant: "apply" | "consult" = "apply";
 
-    function openLeadModal(source: string) {
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function trapFocus(container: HTMLElement, event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+      const nodes = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE)
+      ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    function setLeadSubmitLabel(variant: "apply" | "consult") {
+      const submitButton = leadForm?.querySelector<HTMLButtonElement>(".lead-submit");
+      if (!submitButton) return;
+      const applyLabel =
+        submitButton.dataset.labelApply || "Submit Application";
+      const consultLabel =
+        submitButton.dataset.labelConsult || "Book Consultation";
+      submitButton.textContent =
+        variant === "consult" ? consultLabel : applyLabel;
+    }
+
+    function openLeadModal(source: string, variant?: string | null) {
       if (!leadModal) return;
+      lastFocusBeforeModal = document.activeElement as HTMLElement | null;
       leadModal.hidden = false;
       document.body.classList.add("modal-open");
       if (leadSourceInput) leadSourceInput.value = source || "unknown";
 
       const title = leadModal.querySelector("#lead-modal-title");
       const subtitle = leadModal.querySelector(".lead-modal-subtitle");
-      const isConsult = (source || "").includes("consult");
+      const normalized = `${source || ""} ${variant || ""}`.toLowerCase();
+      const isConsult =
+        normalized.includes("consult") || variant === "consult";
+      leadModalVariant = isConsult ? "consult" : "apply";
+      setLeadSubmitLabel(leadModalVariant);
+
       if (title) {
         title.innerHTML = isConsult
           ? 'Book your <span class="career-kalam">Free Consultation</span>'
@@ -325,8 +366,15 @@ export default function InteractiveBehaviors() {
           : "Share your details and our team will connect with you.";
       }
 
+      if (leadFormMessage) {
+        leadFormMessage.textContent = "";
+        leadFormMessage.classList.remove("is-error");
+      }
+
       requestAnimationFrame(() => {
-        const firstInput = leadForm?.querySelector<HTMLElement>("input, select");
+        const firstInput = leadForm?.querySelector<HTMLElement>(
+          "input:not([type='hidden']), select"
+        );
         firstInput?.focus();
       });
     }
@@ -335,14 +383,24 @@ export default function InteractiveBehaviors() {
       if (!leadModal) return;
       leadModal.hidden = true;
       document.body.classList.remove("modal-open");
+      leadModalVariant = "apply";
+      setLeadSubmitLabel("apply");
+      lastFocusBeforeModal?.focus?.();
+      lastFocusBeforeModal = null;
     }
 
     function openMobileNav() {
       if (!mobileSidebar) return;
+      lastFocusBeforeNav = document.activeElement as HTMLElement | null;
       mobileSidebar.hidden = false;
       document.body.classList.add("nav-open");
       if (openMobileNavButton)
         openMobileNavButton.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(() => {
+        mobileSidebar
+          .querySelector<HTMLElement>("a, button")
+          ?.focus();
+      });
     }
 
     function closeMobileNav() {
@@ -351,6 +409,8 @@ export default function InteractiveBehaviors() {
       document.body.classList.remove("nav-open");
       if (openMobileNavButton)
         openMobileNavButton.setAttribute("aria-expanded", "false");
+      lastFocusBeforeNav?.focus?.();
+      lastFocusBeforeNav = null;
     }
 
     openMobileNavButton?.addEventListener("click", openMobileNav);
@@ -363,7 +423,15 @@ export default function InteractiveBehaviors() {
       const onClick = (event: Event) => {
         if (trigger.hasAttribute("data-close-mobile-nav")) closeMobileNav();
         event.preventDefault();
-        openLeadModal(trigger.dataset.leadSource || "apply-cta");
+        const source =
+          trigger.getAttribute("data-lead-source") ||
+          trigger.dataset.leadSource ||
+          "apply-cta";
+        const variant =
+          trigger.getAttribute("data-modal-variant") ||
+          trigger.dataset.modalVariant ||
+          null;
+        openLeadModal(source, variant);
       };
       trigger.addEventListener("click", onClick);
       triggerCleanups.push(() => trigger.removeEventListener("click", onClick));
@@ -379,6 +447,11 @@ export default function InteractiveBehaviors() {
       }
       if (event.key === "Escape" && leadModal && !leadModal.hidden) {
         closeLeadModal();
+      }
+      if (leadModal && !leadModal.hidden) {
+        trapFocus(leadModal, event);
+      } else if (mobileSidebar && !mobileSidebar.hidden) {
+        trapFocus(mobileSidebar, event);
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -404,16 +477,26 @@ export default function InteractiveBehaviors() {
         status: fields.status,
         source: fields.source,
         submittedAt: new Date().toISOString(),
+        turnstileToken: readTurnstileToken(leadForm),
       };
 
       const submitButton = leadForm.querySelector<HTMLButtonElement>(".lead-submit");
-      if (submitButton) submitButton.disabled = true;
+      const submitLabel = submitButton?.textContent || "";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting…";
+      }
       leadFormMessage.classList.remove("is-error");
+      leadFormMessage.textContent = "";
 
       try {
         await submitLead(leadPayload);
-        leadFormMessage.textContent = "Thanks! Your application has been received.";
+        leadFormMessage.textContent =
+          leadModalVariant === "consult"
+            ? "Thanks! We'll reach out to schedule your free consultation."
+            : "Thanks! Your application has been received.";
         leadForm.reset();
+        resetTurnstileInForm(leadForm);
         const leadCountryCode = leadForm.querySelector<HTMLSelectElement>(
           "[data-country-code-select]"
         );
@@ -426,13 +509,17 @@ export default function InteractiveBehaviors() {
           leadFormMessage.textContent = "";
         }, 1100);
       } catch (error) {
+        resetTurnstileInForm(leadForm);
         leadFormMessage.textContent =
           error instanceof Error
             ? error.message
             : "Something went wrong. Please try again.";
         leadFormMessage.classList.add("is-error");
       } finally {
-        if (submitButton) submitButton.disabled = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Submit Application";
+        }
       }
     };
     leadForm?.addEventListener("submit", onLeadSubmit);
@@ -481,18 +568,25 @@ export default function InteractiveBehaviors() {
         status: fields.status,
         source: "inline-enroll-section",
         submittedAt: new Date().toISOString(),
+        turnstileToken: readTurnstileToken(inlineLeadForm),
       };
 
       const submitButton =
         inlineLeadForm.querySelector<HTMLButtonElement>(".enroll-submit");
-      if (submitButton) submitButton.disabled = true;
+      const submitLabel = submitButton?.textContent || "";
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting…";
+      }
       inlineLeadMessage.classList.remove("is-error");
+      inlineLeadMessage.textContent = "";
 
       try {
         await submitLead(leadPayload);
         inlineLeadMessage.textContent =
-          "Great! You're in. Our team will share cohort details shortly.";
+          "Thanks — we received your details. Our team will be in touch shortly.";
         inlineLeadForm.reset();
+        resetTurnstileInForm(inlineLeadForm);
         const inlineCountryCode = inlineLeadForm.querySelector<HTMLSelectElement>(
           "[data-country-code-select]"
         );
@@ -501,13 +595,17 @@ export default function InteractiveBehaviors() {
           updateCountryCodeDisplay(inlineCountryCode);
         }
       } catch (error) {
+        resetTurnstileInForm(inlineLeadForm);
         inlineLeadMessage.textContent =
           error instanceof Error
             ? error.message
             : "Something went wrong. Please try again.";
         inlineLeadMessage.classList.add("is-error");
       } finally {
-        if (submitButton) submitButton.disabled = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Submit Application";
+        }
       }
     };
     inlineLeadForm?.addEventListener("submit", onInlineSubmit);

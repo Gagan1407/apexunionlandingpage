@@ -25,9 +25,9 @@ export default function MentorsSection() {
                         CLD_PHOTO
                       )}
                       alt="Portrait of Saurabh SenGupta"
-                      width={400}
-                      height={500}
-                      sizes="(max-width: 767px) 90vw, 360px"
+                      width={800}
+                      height={800}
+                      sizes="(max-width: 767px) 90vw, 160px"
                     />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>
@@ -118,9 +118,9 @@ export default function MentorsSection() {
                         CLD_PHOTO
                       )}
                       alt="Portrait of Adhish Rane"
-                      width={400}
-                      height={500}
-                      sizes="(max-width: 767px) 90vw, 360px"
+                      width={800}
+                      height={800}
+                      sizes="(max-width: 767px) 90vw, 160px"
                     />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>
@@ -135,9 +135,9 @@ export default function MentorsSection() {
                         CLD_PHOTO
                       )}
                       alt="Portrait of Vipul Maini"
-                      width={400}
-                      height={500}
-                      sizes="(max-width: 767px) 90vw, 360px"
+                      width={800}
+                      height={800}
+                      sizes="(max-width: 767px) 90vw, 160px"
                     />
                     <span className="mentor-track-badge">Track: Marketing</span>
                   </div>
@@ -202,7 +202,9 @@ export default function MentorsSection() {
                         </p>
                         <a
                           className="mentor-linkedin"
-                          href="#"
+                          href="https://www.linkedin.com/in/srivaradhav"
+                          target="_blank"
+                          rel="noopener noreferrer"
                           aria-label="Srivardhan Vanamalai on LinkedIn"
                         >
                           <span className="mentor-linkedin-icon" aria-hidden="true">in</span>
@@ -225,9 +227,9 @@ export default function MentorsSection() {
                         CLD_PHOTO
                       )}
                       alt="Portrait of Srivardhan Vanamalai"
-                      width={400}
-                      height={500}
-                      sizes="(max-width: 767px) 90vw, 360px"
+                      width={800}
+                      height={800}
+                      sizes="(max-width: 767px) 90vw, 160px"
                     />
                     <span className="mentor-track-badge">Track: Sales</span>
                   </div>

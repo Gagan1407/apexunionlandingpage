@@ -82,9 +82,11 @@ export default function ComparisonSection() {
                 <a
                   className="btn btn-primary"
                   href="#apply"
-                  data-lead-source="comparison-cta"
-                  >Book a Career Consultation</a
+                  data-lead-source="comparison-consult"
+                  data-modal-variant="consult"
                 >
+                  Book a Career Consultation
+                </a>
               </div>
             </div>
           </section>

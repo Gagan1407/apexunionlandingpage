@@ -1,3 +1,7 @@
+"use client";
+
+import TurnstileField from "@/components/lead/TurnstileField";
+
 export default function LeadModal() {
   return (
     <div
@@ -99,7 +103,20 @@ export default function LeadModal() {
             <option value="Other">Other</option>
           </select>
 
-          <button className="btn btn-primary lead-submit" type="submit">
+          <TurnstileField
+            containerId="lead-turnstile"
+            formId="lead-form"
+            theme="light"
+            visibleRootId="lead-modal"
+          />
+
+          <button
+            className="btn btn-primary lead-submit"
+            id="lead-submit"
+            type="submit"
+            data-label-apply="Submit Application"
+            data-label-consult="Book Consultation"
+          >
             Submit Application
           </button>
           <p

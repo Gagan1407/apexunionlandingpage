@@ -1,4 +1,4 @@
-import { getSubmitLeadUrl, getSupabaseAnonKey } from "@/lib/public-env";
+import { getTurnstileSiteKey } from "@/lib/turnstile";
 
 export type LeadPayload = {
   name: string;
@@ -9,6 +9,7 @@ export type LeadPayload = {
   status: string;
   source: string;
   submittedAt: string;
+  turnstileToken?: string;
 };
 
 export type LeadFormFields = {
@@ -119,22 +120,10 @@ export function readLeadFormFields(form: HTMLFormElement): LeadFormFields {
   };
 }
 
-async function syncLeadToEdgeFunction(
-  submitUrl: string,
-  leadPayload: LeadPayload
-) {
-  const anon = getSupabaseAnonKey();
-  const response = await fetch(submitUrl, {
+async function syncLeadViaNextApi(leadPayload: LeadPayload) {
+  const response = await fetch("/api/submit-lead", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(anon
-        ? {
-            apikey: anon,
-            Authorization: `Bearer ${anon}`,
-          }
-        : {}),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(leadPayload),
   });
 
@@ -151,13 +140,10 @@ async function syncLeadToEdgeFunction(
 }
 
 export async function submitLead(leadPayload: LeadPayload) {
-  const submitUrl = getSubmitLeadUrl();
-  if (!submitUrl) {
-    throw new Error(
-      "Lead submission is not configured. Set NEXT_PUBLIC_SUPABASE_URL (or NEXT_PUBLIC_SUBMIT_LEAD_URL) in your host env vars and redeploy."
-    );
+  if (getTurnstileSiteKey() && !leadPayload.turnstileToken?.trim()) {
+    throw new Error("Please complete the security check before submitting.");
   }
 
-  await syncLeadToEdgeFunction(submitUrl, leadPayload);
+  await syncLeadViaNextApi(leadPayload);
   return { ok: true as const };
 }

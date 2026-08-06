@@ -7,7 +7,7 @@ export default function AboutApexSection() {
               </h2>
               <p className="about-apex-lead">
                 Most programs give you slides, quizzes, and a piece of paper.
-                Apex Union gives you a career.
+                Apex Union builds career-ready operators with placement assistance.
               </p>
               <p className="about-apex-body">
                 We don&apos;t do boring lectures. Every single class ends with a tangible,
@@ -66,10 +66,10 @@ export default function AboutApexSection() {
               </div>
 
               <div className="about-graduation-block">
-                <h3 className="about-graduation-heading">🎓 The Apex Standard</h3>
+                <h3 className="about-graduation-heading">The Apex Standard</h3>
                 <p className="about-graduation-text">
                   By graduation, you won&apos;t leave with a binder of notes. You will exit with a
-                  bulletproof portfolio and undeniable proof of work. Don&apos;t just tell companies
+                  real portfolio and clear proof of work. Don&apos;t just tell companies
                   what you can do—show them.
                 </p>
               </div>

@@ -39,8 +39,8 @@ export default function TruthSection() {
                   </svg>
                 </span>
                 <div className="truth-barrier-impact">
-                  <span className="truth-barrier-percent">78%</span>
-                  <span className="truth-barrier-impact-label">Impact</span>
+                  <span className="truth-barrier-percent">Common</span>
+                  <span className="truth-barrier-impact-label">Barrier</span>
                 </div>
               </aside>
               <div className="truth-barrier-body">
@@ -97,8 +97,8 @@ export default function TruthSection() {
                   </svg>
                 </span>
                 <div className="truth-barrier-impact">
-                  <span className="truth-barrier-percent">88%</span>
-                  <span className="truth-barrier-impact-label">Impact</span>
+                  <span className="truth-barrier-percent">Severe</span>
+                  <span className="truth-barrier-impact-label">Barrier</span>
                 </div>
               </aside>
               <div className="truth-barrier-body">
@@ -152,8 +152,8 @@ export default function TruthSection() {
                   </svg>
                 </span>
                 <div className="truth-barrier-impact">
-                  <span className="truth-barrier-percent">72%</span>
-                  <span className="truth-barrier-impact-label">Impact</span>
+                  <span className="truth-barrier-percent">Critical</span>
+                  <span className="truth-barrier-impact-label">Barrier</span>
                 </div>
               </aside>
               <div className="truth-barrier-body">
