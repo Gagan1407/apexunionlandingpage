@@ -1,0 +1,146 @@
+name: Deploy to cPanel (SSH)
+
+# Deploys the Next.js standalone build to cPanel Node.js App over SSH/rsync.
+# Triggers only after a successful push to prod.
+#
+# Required GitHub secrets:
+#   CPANEL_SSH_HOST
+#   CPANEL_SSH_USER
+#   CPANEL_SSH_PRIVATE_KEY
+#   CPANEL_REMOTE_PATH          e.g. /home/USER/apex-web
+# Optional:
+#   CPANEL_SSH_PORT             default 22
+#   CPANEL_RESTART_CMD          e.g. touch /home/USER/apex-web/tmp/restart.txt
+# Also uses existing NEXT_PUBLIC_* secrets for the production build.
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cpanel-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & rsync to cPanel
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build standalone app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUBMIT_LEAD_URL: ${{ secrets.NEXT_PUBLIC_SUBMIT_LEAD_URL }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npm run build
+
+      - name: Assemble deploy bundle
+        run: |
+          set -euo pipefail
+          rm -rf deploy-bundle
+          mkdir -p deploy-bundle
+
+          # Next standalone server
+          cp -a .next/standalone/. deploy-bundle/
+
+          # Static assets required next to standalone
+          mkdir -p deploy-bundle/.next/static
+          cp -a .next/static/. deploy-bundle/.next/static/
+
+          # Public files
+          if [ -d public ]; then
+            mkdir -p deploy-bundle/public
+            cp -a public/. deploy-bundle/public/
+          fi
+
+          # Passenger / cPanel convenience
+          mkdir -p deploy-bundle/tmp
+          touch deploy-bundle/tmp/restart.txt
+
+          # Helpful for Node Selector apps that expect package.json
+          cp package.json deploy-bundle/package.json
+
+          echo "Bundle contents:"
+          ls -la deploy-bundle | head -30
+
+      - name: Setup SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          SSH_PORT: ${{ secrets.CPANEL_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          test -n "${SSH_PRIVATE_KEY:-}" || { echo "Missing CPANEL_SSH_PRIVATE_KEY"; exit 1; }
+          test -n "${SSH_HOST:-}" || { echo "Missing CPANEL_SSH_HOST"; exit 1; }
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/cpanel_key
+          chmod 600 ~/.ssh/cpanel_key
+
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Ensure remote directories
+        env:
+          SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+          SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          SSH_PORT: ${{ secrets.CPANEL_SSH_PORT || '22' }}
+          REMOTE_PATH: ${{ secrets.CPANEL_REMOTE_PATH }}
+        run: |
+          set -euo pipefail
+          test -n "${SSH_USER:-}" || { echo "Missing CPANEL_SSH_USER"; exit 1; }
+          test -n "${REMOTE_PATH:-}" || { echo "Missing CPANEL_REMOTE_PATH"; exit 1; }
+
+          ssh -i ~/.ssh/cpanel_key -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
+            "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p '${REMOTE_PATH}' '${REMOTE_PATH}/tmp' '${REMOTE_PATH}/logs'"
+
+      - name: Rsync standalone build
+        env:
+          SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+          SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          SSH_PORT: ${{ secrets.CPANEL_SSH_PORT || '22' }}
+          REMOTE_PATH: ${{ secrets.CPANEL_REMOTE_PATH }}
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/cpanel_key -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new" \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'logs/' \
+            deploy-bundle/ \
+            "${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}/"
+
+      - name: Restart Node app on cPanel
+        env:
+          SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+          SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          SSH_PORT: ${{ secrets.CPANEL_SSH_PORT || '22' }}
+          REMOTE_PATH: ${{ secrets.CPANEL_REMOTE_PATH }}
+          RESTART_CMD: ${{ secrets.CPANEL_RESTART_CMD }}
+        run: |
+          set -euo pipefail
+          # Default Passenger-style restart; override with CPANEL_RESTART_CMD if needed.
+          CMD="${RESTART_CMD:-touch '${REMOTE_PATH}/tmp/restart.txt'}"
+          ssh -i ~/.ssh/cpanel_key -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
+            "${SSH_USER}@${SSH_HOST}" \
+            "$CMD"
+          echo "Deploy finished → ${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}"
