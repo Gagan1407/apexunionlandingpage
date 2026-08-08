@@ -2,11 +2,9 @@
 # cPanel Git™ Version Control deploy hook
 # Runs after Pull/Deploy (or when CI triggers VersionControlDeployment / equivalent).
 #
-# BEFORE FIRST DEPLOY — set NODE_BIN_DIR to your Node.js App virtualenv bin, e.g.:
-#   /home/apexunion/nodevenv/apex-web/22/bin
-#
-# Set NEXT_PUBLIC_* + TURNSTILE_SECRET_KEY + LEAD_PROXY_SECRET in the
-# Node.js App UI (or a server-side .env that is NOT in git).
+# This host exposes system Node at /bin (no Setup Node.js App / nodevenv).
+# Set NEXT_PUBLIC_* + TURNSTILE_SECRET_KEY + LEAD_PROXY_SECRET in a server
+# .env under the app root (never commit that file). Requires Node 22+.
 
 deployment:
   tasks:
@@ -16,11 +14,8 @@ deployment:
       echo "Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
       echo "Commit: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
-      # >>> EDIT THIS if npm is not found <<<
-      NODE_BIN_DIR="/home/apexunion/nodevenv/apex-web/22/bin"
-      if [ -d "$NODE_BIN_DIR" ]; then
-        export PATH="$NODE_BIN_DIR:$PATH"
-      fi
+      # System Node on this host (apexunion@india): /bin/node, /bin/npm
+      export PATH="/bin:$PATH"
 
       command -v node
       command -v npm
