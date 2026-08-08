@@ -117,9 +117,11 @@ jobs:
           SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
         run: |
           set -euo pipefail
+          # Trim accidental whitespace/newlines from secrets
+          SSH_HOST="$(printf '%s' "${SSH_HOST:-}" | tr -d '[:space:]')"
+          SSH_PORT="$(printf '%s' "${SSH_PORT:-1012}" | tr -d '[:space:]')"
           test -n "${SSH_PRIVATE_KEY:-}" || { echo "Missing CPANEL_SSH_PRIVATE_KEY"; exit 1; }
           test -n "${SSH_HOST:-}" || { echo "Missing CPANEL_SSH_HOST"; exit 1; }
-          SSH_PORT="${SSH_PORT:-1012}"
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -138,9 +140,12 @@ jobs:
           DEPLOY_CMD: ${{ secrets.CPANEL_DEPLOY_CMD }}
         run: |
           set -euo pipefail
+          SSH_USER="$(printf '%s' "${SSH_USER:-}" | tr -d '[:space:]')"
+          SSH_HOST="$(printf '%s' "${SSH_HOST:-}" | tr -d '[:space:]')"
+          SSH_PORT="$(printf '%s' "${SSH_PORT:-1012}" | tr -d '[:space:]')"
+          REMOTE_PATH="$(printf '%s' "${REMOTE_PATH:-}" | tr -d '\r' | sed 's/[[:space:]]*$//;s/^[[:space:]]*//')"
           test -n "${SSH_USER:-}" || { echo "Missing CPANEL_SSH_USER"; exit 1; }
           test -n "${REMOTE_PATH:-}" || { echo "Missing CPANEL_REMOTE_PATH"; exit 1; }
-          SSH_PORT="${SSH_PORT:-1012}"
 
           ssh -i ~/.ssh/cpanel_key -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
             "${SSH_USER}@${SSH_HOST}" \
@@ -159,11 +164,7 @@ jobs:
             uapi VersionControlDeployment create repository_root="$REMOTE_PATH"
           else
             echo "uapi not found — running build equivalent to .cpanel.yml"
-            APP_NAME="$(basename "$REMOTE_PATH")"
-            NODE_BIN_DIR="/home/${USER}/nodevenv/${APP_NAME}/22/bin"
-            if [ -d "$NODE_BIN_DIR" ]; then
-              export PATH="$NODE_BIN_DIR:$PATH"
-            fi
+            export PATH="/bin:$PATH"
             if [ -f .env ]; then
               set -a
               # shellcheck disable=SC1091
