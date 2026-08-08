@@ -1,22 +1,21 @@
-# Deploy Apex Union to cPanel with Git™ Version Control (no GitHub SSH)
+# Deploy Apex Union via cPanel Git™ Version Control (SSH port 1012)
 
-This path is for hosts where outbound SSH to the server is blocked.
-The **server pulls** from GitHub; a `.cpanel.yml` hook builds Next.js on the server.
+Single path: commit on **`dev`** → GitHub Actions tests → promote to **`prod`** + **`main`** → SSH into cPanel (port **1012**) → `git pull` **`prod`** → run `.cpanel.yml` deploy.
 
-## One-time setup
+## One-time cPanel setup
 
 ### 1) Create Node.js App
 cPanel → **Setup Node.js App** → Create:
 
 | Field | Value |
 |--------|--------|
-| Application root | e.g. `apex-web` (cPanel will use `/home/apexunion/apex-web`) |
-| Application URL | `apexunion.in` |
+| Application root | e.g. `apex-web` (`/home/USER/apex-web`) |
+| Application URL | your domain |
 | Application startup file | `.next/standalone/server.js` |
 | Node version | **22** (or newest available) |
 | Mode | Production |
 
-**Environment variables** (in the Node app UI):
+**Environment variables** (Node app UI or server `.env` — never commit):
 
 ```env
 NODE_ENV=production
@@ -25,71 +24,73 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SUBMIT_LEAD_URL=...
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=...
-NEXT_PUBLIC_SITE_URL=https://apexunion.in
+NEXT_PUBLIC_SITE_URL=https://your-domain
 TURNSTILE_SECRET_KEY=...
 LEAD_PROXY_SECRET=...
 ```
 
-`NEXT_PUBLIC_*` must exist **before** the first build (hook reads them from the app env / `.env`).
-
-Optional: create `/home/apexunion/apex-web/.env` with the same vars (never commit this file).
-
 ### 2) Point `.cpanel.yml` at your Node bin dir
-After creating the Node app, open **Setup Node.js App** → your app → note the
-virtual environment path (often shown near “npm” / “Detected” tools), e.g.:
+After creating the app, note the virtualenv path (e.g. `/home/USER/nodevenv/apex-web/22/bin`), set `NODE_BIN_DIR` in `.cpanel.yml`, commit on `dev`.
 
-`/home/apexunion/nodevenv/apex-web/22/bin`
-
-Edit `.cpanel.yml` and set `NODE_BIN_DIR` to that path. Commit and push to `prod`.
-
-### 3) Clone the repo with Git™ Version Control
+### 3) Clone with Git™ Version Control
 cPanel → **Git™ Version Control** → **Create**:
 
 | Field | Value |
 |--------|--------|
-| Clone URL | `https://github.com/Gagan1407/apexunionlandingpage.git` |
-| Repository Path | **same as Application root** (`apex-web`) |
-| Repository Name | `apex-web` |
+| Clone URL | `https://github.com/Gagan1407/apexunionlandingpage.git` (or SSH clone if private) |
+| Repository Path | **same as Application root** |
+| Repository Name | e.g. `apex-web` |
 
-Then:
+Then checkout / track branch **`prod`**.
 
-1. Open the repo in Git Version Control  
-2. Change branch to **`prod`** (checkout / pull `prod`)  
-3. Click **Update from Remote** / **Pull or Deploy**
+### 4) Enable SSH (port 1012)
+1. cPanel → **SSH Access** → generate or import key; authorize the public key.
+2. Confirm you can connect: `ssh -p 1012 USER@HOST`
+3. Add the **private** key as GitHub secret `CPANEL_SSH_PRIVATE_KEY`.
 
-The first deploy runs `.cpanel.yml` → `npm ci` → `npm run build` → copies standalone assets → `tmp/restart.txt`.
+### 5) GitHub Actions secrets
+Settings → Secrets and variables → Actions:
 
-### 4) SSL + DNS
-DNS already points here. Enable **AutoSSL** for `apexunion.in` + `www`.
+| Secret | Example |
+|--------|---------|
+| `CPANEL_SSH_HOST` | server hostname or IP |
+| `CPANEL_SSH_USER` | cPanel username |
+| `CPANEL_SSH_PRIVATE_KEY` | full private key PEM |
+| `CPANEL_REMOTE_PATH` | `/home/USER/apex-web` |
+| `CPANEL_SSH_PORT` | `1012` (optional; pipeline defaults to 1012) |
+| `PROMOTE_TOKEN` | PAT with `repo` if `prod`/`main` are protected |
 
-### 5) Smoke test
-- https://apexunion.in  
-- https://apexunion.in/api/health  
+Optional: `CPANEL_DEPLOY_CMD` to override the remote deploy command.
+
+Create a GitHub **Environment** named `production` if prompted by the deploy job.
+
+### 6) SSL + smoke test
+Enable AutoSSL. Check:
+
+- `https://your-domain/`
+- `https://your-domain/api/health`
 
 ## Everyday updates
 
 ```text
-push to prod (via PR from dev)
+git push origin dev
         ↓
-in cPanel Git UI → Pull or Deploy   (or enable auto-deploy if available)
+CI: lint → typecheck → build
+        ↓ (on success)
+promote: push same SHA → prod + main
         ↓
-.cpanel.yml builds + restarts Node app
+SSH :1012 → git pull prod → .cpanel.yml / uapi deploy → restart
 ```
 
-This is **semi-automatic**: GitHub CI still tests on push; **going live on cPanel** is a Pull/Deploy click unless your host supports deploy-on-push webhooks.
+Do **not** push directly to `prod` or `main` for releases — let the pipeline promote from `dev`.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `npm: command not found` in deploy | Fix `NODE_BIN_DIR` in `.cpanel.yml` |
-| Build missing env | Set vars in Node app UI or `.env` on server |
-| Site blank / 503 | Confirm startup file is `.next/standalone/server.js`, then **Restart** in Node.js App |
-| Git pull auth errors | Repo is public — use HTTPS clone URL above |
-
-## vs GitHub Actions SSH
-| | Git Version Control | Actions SSH |
-|--|---------------------|-------------|
-| Needs open SSH port | No | Yes |
-| Build location | cPanel server | GitHub runner |
-| Deploy trigger | Pull/Deploy in cPanel | Automatic on `prod` push |
+| SSH connection refused | Confirm port **1012**, firewall, and authorized key |
+| `npm: command not found` | Fix `NODE_BIN_DIR` in `.cpanel.yml` |
+| Build missing env | Set vars in Node app UI or server `.env` |
+| Site blank / 503 | Startup file = `.next/standalone/server.js`, then Restart |
+| Promote push denied | Add `PROMOTE_TOKEN` (PAT) or loosen branch protection for Actions |
+| Git pull auth errors | Prefer HTTPS public clone, or register a deploy key on GitHub |

@@ -8,97 +8,34 @@ Requires **Node.js 22+** (see `.nvmrc` / `package.json` `engines`).
 
 | Branch | Role |
 |--------|------|
-| `dev` | Developers push here — testing / staging |
-| `prod` | Live production source (set Netlify/Vercel **Production branch** = `prod`) |
-| `main` | Backup / stable copy of production |
+| `dev` | Commit and push here |
+| `prod` | Live production (cPanel Git tracks this branch) |
+| `main` | Backup of production |
 
-**Flow:** `dev` → (test) → `prod` → (backup) → `main`
+**Flow:** push `dev` → CI (lint + typecheck + build) → promote same commit to `prod` + `main` → SSH **port 1012** pull/deploy on cPanel.
 
-### GitHub Actions
-
-| Workflow | When | What |
-|----------|------|------|
-| **3-Branch CI/CD Pipeline** (`ci-cd.yml`) | push/PR to `dev`, `prod`, `main` | lint → typecheck → test (if present) → build |
-| **Docker** | push/PR to `dev` or `prod` | Build image + health smoke; **push to GHCR on `prod` only** |
-| **Prod branch guard** | PRs into `prod` | Source branch must be `dev` |
-
-On `main`, if there is no `package.json` (static backup), the Node build is skipped.
+There is **one** workflow: `.github/workflows/ci-cd.yml`.
 
 ### Daily commands
 
 ```bash
-# Develop
 git checkout dev
 # ... changes ...
 git add . && git commit -m "New feature" && git push origin dev
-
-# Promote to production (prefer a PR: base=prod, compare=dev)
-git checkout prod
-git merge dev
-git push origin prod
-
-# Backup production onto main
-git checkout main
-git merge prod
-git push origin main
+# CI promotes to prod + main and deploys if tests pass
 ```
 
-### GitHub repository secrets (for Docker prod images)
+### Production deploy (cPanel)
 
-Settings → Secrets and variables → Actions:
+See [`docs/cpanel-git-deploy.md`](docs/cpanel-git-deploy.md) for full setup.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SUBMIT_LEAD_URL`
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-- `NEXT_PUBLIC_SITE_URL` (optional; defaults to `https://www.apexunion.com`)
+Required Actions secrets: `CPANEL_SSH_HOST`, `CPANEL_SSH_USER`, `CPANEL_SSH_PRIVATE_KEY`, `CPANEL_REMOTE_PATH`. Optional: `CPANEL_SSH_PORT` (defaults to **1012**), `PROMOTE_TOKEN`.
 
-Runtime secrets on the host (not baked into CI placeholders):
+Runtime secrets on the cPanel Node app (not in git):
 
 - `TURNSTILE_SECRET_KEY`
 - `LEAD_PROXY_SECRET`
-
-### Docker (local or VPS)
-
-```bash
-cp .env.example .env.docker
-# fill NEXT_PUBLIC_* + TURNSTILE_SECRET_KEY + LEAD_PROXY_SECRET
-
-npm run docker:build
-npm run docker:up
-# health: curl http://localhost:3000/api/health
-```
-
-Pull the published prod image on a server:
-
-```bash
-docker pull ghcr.io/<owner>/<repo>:prod
-docker run -d --name apex-web -p 3000:3000 \
-  -e TURNSTILE_SECRET_KEY=… \
-  -e LEAD_PROXY_SECRET=… \
-  ghcr.io/<owner>/<repo>:prod
-```
-
-## Deploy (any Next.js host)
-
-```bash
-npm ci
-npm run build
-npm run start
-```
-
-Set these **production** environment variables on your host (then rebuild — `NEXT_PUBLIC_*` are baked in at build time):
-
-| Variable | Value |
-|----------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://YOUR_PROJECT.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon key |
-| `NEXT_PUBLIC_SUBMIT_LEAD_URL` | `https://YOUR_PROJECT.supabase.co/functions/v1/submit-lead` (optional if URL above is set) |
-| `NEXT_PUBLIC_SITE_URL` | `https://www.yourdomain.com` (canonical URL for OG / robots / sitemap) |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile **site** key |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile **secret** key (server-only on the Next host) |
-
-Point your custom domain DNS (A/CNAME) at the host, enable HTTPS, then open `/admin` and sign in with your Supabase Auth admin user.
+- all `NEXT_PUBLIC_*` (baked at build time on the server via `.cpanel.yml`)
 
 ## Local development
 
