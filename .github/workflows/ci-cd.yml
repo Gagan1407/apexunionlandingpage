@@ -73,7 +73,7 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-ci-anon-key}"
           export NEXT_PUBLIC_SUBMIT_LEAD_URL="${NEXT_PUBLIC_SUBMIT_LEAD_URL:-https://example.supabase.co/functions/v1/submit-lead}"
           export NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-ci-turnstile-site-key}"
-          export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://www.apexunion.com}"
+          export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://apexunion.in}"
           npm run build
 
   promote:

@@ -30,7 +30,7 @@ const SITE_DESCRIPTION =
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://www.apexunion.com";
+  "https://apexunion.in";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

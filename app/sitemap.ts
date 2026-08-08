@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 function siteBase() {
   return (
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-    "https://www.apexunion.com"
+    "https://apexunion.in"
   );
 }
 
