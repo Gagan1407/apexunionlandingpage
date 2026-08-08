@@ -95,8 +95,10 @@ jobs:
           set -euo pipefail
           SHA="$(git rev-parse HEAD)"
           echo "Promoting $SHA → origin/prod and origin/main"
-          git push origin "HEAD:prod"
-          git push origin "HEAD:main"
+          # force-with-lease keeps prod/main identical to the tested dev tip
+          # without clobbering unexpected remote updates.
+          git push --force-with-lease origin "HEAD:prod"
+          git push --force-with-lease origin "HEAD:main"
           echo "Promote complete."
 
   deploy:
