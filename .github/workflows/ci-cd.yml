@@ -154,8 +154,10 @@ jobs:
           cd "$REMOTE_PATH"
           echo "=== cPanel deploy @ $(pwd) ==="
           git fetch origin
-          git checkout prod
-          git pull --ff-only origin prod
+          git checkout -B prod origin/prod
+          # Mirror GitHub prod exactly (histories may diverge after force-with-lease promotes).
+          git reset --hard origin/prod
+          git clean -fd
           echo "Now at $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)"
 
           if [ -n "${DEPLOY_CMD:-}" ]; then
