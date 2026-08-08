@@ -155,25 +155,25 @@ jobs:
           echo "=== cPanel deploy @ $(pwd) ==="
           git fetch origin
           git checkout -B prod origin/prod
-          # Mirror GitHub prod exactly (histories may diverge after force-with-lease promotes).
           git reset --hard origin/prod
-          git clean -fd
+          # Do NOT git clean -fd — it deletes ignored .next/ builds and breaks CSS.
           echo "Now at $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)"
 
           if [ -n "${DEPLOY_CMD:-}" ]; then
             eval "$DEPLOY_CMD"
-          elif command -v uapi >/dev/null 2>&1; then
-            uapi VersionControlDeployment create repository_root="$REMOTE_PATH"
           else
-            echo "uapi not found — running build equivalent to .cpanel.yml"
+            echo "Building Next.js standalone + restarting PM2"
             export PATH="/bin:$PATH"
+            unset NODE_ENV
             if [ -f .env ]; then
               set -a
               # shellcheck disable=SC1091
               . ./.env
               set +a
             fi
-            npm ci
+            # Need devDependencies (Tailwind/types) even when .env sets NODE_ENV=production
+            npm ci --include=dev
+            export NODE_ENV=production
             npm run build
             mkdir -p .next/standalone/.next
             rm -rf .next/standalone/.next/static
@@ -182,8 +182,24 @@ jobs:
               rm -rf .next/standalone/public
               cp -a public .next/standalone/public
             fi
+            if [ -f .env ]; then
+              cp .env .next/standalone/.env
+            fi
             mkdir -p tmp
             touch tmp/restart.txt
+
+            set -a
+            # shellcheck disable=SC1091
+            [ -f .env ] && . ./.env
+            set +a
+            export NODE_ENV=production PORT="${PORT:-3010}" HOSTNAME=0.0.0.0
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 delete apexweb 2>/dev/null || true
+              pm2 start "$REMOTE_PATH/.next/standalone/server.js" \
+                --name apexweb \
+                --cwd "$REMOTE_PATH/.next/standalone"
+              pm2 save
+            fi
           fi
 
           echo "=== Deploy finished ==="
