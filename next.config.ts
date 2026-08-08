@@ -30,14 +30,24 @@ const securityHeaders = [
       "frame-src https://challenges.cloudflare.com",
       "child-src https://challenges.cloudflare.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
-      "upgrade-insecure-requests",
+      // Re-enable after a trusted Let's Encrypt cert is installed:
+      // "upgrade-insecure-requests",
     ].join("; "),
   },
 ];
+
+// Don't send HSTS while the host still uses a self-signed cert — mobile
+// browsers pin HTTPS and then block CSS/JS/images.
+const productionHeaders = securityHeaders.filter(
+  (h) => h.key !== "Strict-Transport-Security"
+);
+
 const nextConfig: NextConfig = {
   // Required for the production Docker image (smaller runtime).
   output: "standalone",
   images: {
+    // cPanel standalone often lacks sharp; serve images directly.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -49,7 +59,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:path*",
-        headers: securityHeaders,
+        headers: productionHeaders,
       },
     ];
   },
