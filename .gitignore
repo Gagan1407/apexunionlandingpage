@@ -39,8 +39,6 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
-!.env.cloudflare.example
-.env.cloudflare
 *.local
 credentials.json
 **/service-account*.json
