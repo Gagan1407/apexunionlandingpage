@@ -41,15 +41,6 @@ export default function SiteFooter() {
               <ul className="footer-list">
                 <li>
                   <a
-                    href="https://www.linkedin.com/company/apex-union"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    LinkedIn
-                  </a>
-                </li>
-                <li>
-                  <a
                     href="https://www.instagram.com/apexxunion?igsh=MWVyZmQ4OTUydTFleA=="
                     target="_blank"
                     rel="noopener noreferrer"
