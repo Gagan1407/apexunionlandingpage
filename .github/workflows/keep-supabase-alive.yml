@@ -1,0 +1,42 @@
+name: Keep Supabase alive
+
+# Daily dummy UPDATE on public.keepalive so the free project is not paused
+# after 7 days of inactivity. Uses the public anon key only (never service_role).
+
+on:
+  schedule:
+    # 04:00 UTC daily (~09:30 IST)
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Update keepalive row
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: PATCH keepalive
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_URL:-}" || { echo "Missing NEXT_PUBLIC_SUPABASE_URL secret"; exit 1; }
+          test -n "${SUPABASE_ANON_KEY:-}" || { echo "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY secret"; exit 1; }
+
+          NOW="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          CODE="$(curl -sS -o /tmp/keepalive-body.txt -w "%{http_code}" \
+            -X PATCH "${SUPABASE_URL}/rest/v1/keepalive?id=eq.1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"last_ping_at\":\"${NOW}\",\"note\":\"ok\"}")"
+
+          echo "HTTP ${CODE}"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "Keepalive update failed. Apply supabase/migrations/20260924000000_keepalive.sql in the Supabase SQL editor first."
+            cat /tmp/keepalive-body.txt || true
+            exit 1
+          fi
+          echo "Updated keepalive.last_ping_at=${NOW}"
